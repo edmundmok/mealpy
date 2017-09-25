@@ -128,3 +128,4 @@ def execute_reserve_meal():
             time.sleep(3)
 
 scheduler.start()
+print 'Job scheduled. Will attempt to reserve meal at 16:59:55 every day.'
