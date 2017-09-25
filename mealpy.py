@@ -21,7 +21,7 @@ HEADERS = {
 }
 
 
-class MealPal:
+class MealPal(object):
 
     def __init__(self):
         self.headers = HEADERS
@@ -112,8 +112,8 @@ mp.login(email, password)
 while (True):
     try:
         print mp.reserve_meal(
-            '12:15pm-12:30pm', restaurant_name='Hive Coffee Bar',
+            '12:15pm-12:30pm', restaurant_name='Coast Poke Counter - Battery St.',
             city_name='San Francisco')
     except IndexError:
         print "Retrying..."
-        time.sleep(5)
+        time.sleep(3)
