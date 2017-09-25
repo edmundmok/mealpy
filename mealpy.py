@@ -3,6 +3,8 @@ import json
 import requests
 import time
 
+from apscheduler.schedulers.blocking import BlockingScheduler
+
 BASE_DOMAIN = 'secure.mealpal.com'
 BASE_URL = 'https://' + BASE_DOMAIN
 LOGIN_URL = BASE_URL + '/1/login'
@@ -103,17 +105,26 @@ class MealPal(object):
     def cancel_current_meal(self):
         pass
 
+scheduler = BlockingScheduler()
 mp = MealPal()
 print "Enter email: "
 email = raw_input()
 print "Enter password: "
 password = getpass.getpass()
 mp.login(email, password)
-while (True):
-    try:
-        print mp.reserve_meal(
-            '12:15pm-12:30pm', restaurant_name='Coast Poke Counter - Battery St.',
-            city_name='San Francisco')
-    except IndexError:
-        print "Retrying..."
-        time.sleep(3)
+
+
+@scheduler.scheduled_job('cron', hour=16, minute=59, second=55)
+def execute_reserve_meal():
+    while (True):
+        try:
+            print mp.reserve_meal(
+                '12:15pm-12:30pm',
+                restaurant_name='Coast Poke Counter - Battery St.',
+                city_name='San Francisco')
+            return
+        except IndexError:
+            print "Retrying..."
+            time.sleep(3)
+
+scheduler.start()
