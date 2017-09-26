@@ -95,7 +95,7 @@ class MealPal(object):
         r = requests.post(
             RESERVATION_URL, data=json.dumps(reserve_data),
             headers=self.headers, cookies=self.cookies)
-        return r
+        return r.status_code
 
     def get_current_meal(self):
         r = requests.post(
@@ -118,11 +118,15 @@ mp.login(email, password)
 def execute_reserve_meal():
     while (True):
         try:
-            print mp.reserve_meal(
+            status_code = mp.reserve_meal(
                 '12:15pm-12:30pm',
                 restaurant_name='Coast Poke Counter - Battery St.',
                 city_name='San Francisco')
-            return
+            if status_code == 200:
+                print 'Reservation success!'
+                return
+            else:
+                print 'Reservation error, retrying!'
         except IndexError:
             print "Retrying..."
             time.sleep(3)
