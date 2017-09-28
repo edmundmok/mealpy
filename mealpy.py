@@ -106,17 +106,17 @@ class MealPal(object):
         pass
 
 scheduler = BlockingScheduler()
-mp = MealPal()
 print "Enter email: "
 email = raw_input()
 print "Enter password: "
 password = getpass.getpass()
-mp.login(email, password)
 
 
 @scheduler.scheduled_job('cron', hour=16, minute=59, second=55)
 def execute_reserve_meal():
-    while (True):
+    mp = MealPal()
+    mp.login(email, password)
+    while True:
         try:
             status_code = mp.reserve_meal(
                 '12:15pm-12:30pm',
