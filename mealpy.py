@@ -112,12 +112,12 @@ print "Enter password: "
 password = getpass.getpass()
 
 
-@scheduler.scheduled_job('cron', hour=16, minute=59, second=55)
+@scheduler.scheduled_job('cron', hour=17, minute=00, second=00)
 def execute_reserve_meal():
-    mp = MealPal()
-    mp.login(email, password)
     while True:
         try:
+            mp = MealPal()
+            mp.login(email, password)
             status_code = mp.reserve_meal(
                 '12:15pm-12:30pm',
                 restaurant_name='Coast Poke Counter - Battery St.',
@@ -129,7 +129,6 @@ def execute_reserve_meal():
                 print 'Reservation error, retrying!'
         except IndexError:
             print "Retrying..."
-            time.sleep(3)
+            time.sleep(1)
 
 scheduler.start()
-print 'Job scheduled. Will attempt to reserve meal at 16:59:55 every day.'
