@@ -37,6 +37,7 @@ class MealPal(object):
             LOGIN_URL, data=json.dumps(data), headers=self.headers)
         self.cookies = r.cookies
         self.cookies.set(LOGGED_IN_COOKIE, 'true', domain=BASE_URL)
+        return r.status_code
 
     def get_cities(self):
         if not self.cities:
@@ -114,16 +115,27 @@ password = getpass.getpass()
 
 @scheduler.scheduled_job('cron', hour=17, minute=00, second=00)
 def execute_reserve_meal():
+    mp = MealPal()
+
+    # Try to login
+    while True:
+        status_code = mp.login(email, password)
+        if status_code == 200:
+            print 'Logged In!'
+            break
+        else:
+            print 'Login Failed! Retrying...'
+
+    # Once logged in, try to reserve meal
     while True:
         try:
-            mp = MealPal()
-            mp.login(email, password)
             status_code = mp.reserve_meal(
                 '12:15pm-12:30pm',
                 restaurant_name='Coast Poke Counter - Battery St.',
                 city_name='San Francisco')
             if status_code == 200:
                 print 'Reservation success!'
+                print 'Leave this script running to reschedule again the next day!'
                 return
             else:
                 print 'Reservation error, retrying!'
