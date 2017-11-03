@@ -113,7 +113,7 @@ print "Enter password: "
 password = getpass.getpass()
 
 
-@scheduler.scheduled_job('cron', hour=17, minute=00, second=00)
+@scheduler.scheduled_job('cron', hour=16, minute=59, second=58)
 def execute_reserve_meal():
     mp = MealPal()
 
