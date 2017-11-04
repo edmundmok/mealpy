@@ -1,4 +1,5 @@
-# mealpy
+# mealpy 
+Reserve your meals on MealPal automatically, as soon as the kitchen opens.
 Never miss your favourite MealPal meals again!
 
 ## Description
