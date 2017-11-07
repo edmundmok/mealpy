@@ -141,6 +141,6 @@ def execute_reserve_meal():
                 print 'Reservation error, retrying!'
         except IndexError:
             print "Retrying..."
-            time.sleep(1)
+            time.sleep(0.05)
 
 scheduler.start()
