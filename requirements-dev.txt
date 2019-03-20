@@ -1,0 +1,6 @@
+flake8
+ipython
+pre-commit
+pudb
+pylint
+pytest
