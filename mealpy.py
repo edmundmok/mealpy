@@ -48,7 +48,8 @@ class MealPal(object):
     def get_city(self, city_name):
         if not self.cities:
             self.get_cities()
-        return filter(lambda x: x['name'] == city_name, self.cities)[0]
+        city = next((i for i in self.cities if i['name'] == city_name), None)
+        return city
 
     def get_schedules(self, city_name, city_id=None):
         if not city_id:
@@ -62,15 +63,15 @@ class MealPal(object):
             self, restaurant_name, city_name=None, city_id=None):
         if not self.schedules:
             self.get_schedules(city_name, city_id)
-        return filter(lambda x: x['restaurant']['name'] == restaurant_name,
-                      self.schedules)[0]
+        restaurant = next(i for i in self.schedules if i['restaurant']['name'] == restaurant_name)
+        return restaurant
 
     def get_schedule_by_meal_name(
             self, meal_name, city_name=None, city_id=None):
         if not self.schedules:
             self.get_schedules(city_name, city_id)
-        return filter(lambda x: x['meal']['name'] == meal_name,
-                      self.schedules)[0]
+
+        return next(i for i in self.schedules if i['meal']['name'] == meal_name)
 
     def reserve_meal(
             self, timing, restaurant_name=None, meal_name=None, city_name=None,
@@ -107,9 +108,9 @@ class MealPal(object):
         pass
 
 scheduler = BlockingScheduler()
-print "Enter email: "
-email = raw_input()
-print "Enter password: "
+print("Enter email: ")
+email = input()
+print("Enter password: ")
 password = getpass.getpass()
 
 
@@ -121,10 +122,10 @@ def execute_reserve_meal():
     while True:
         status_code = mp.login(email, password)
         if status_code == 200:
-            print 'Logged In!'
+            print('Logged In!')
             break
         else:
-            print 'Login Failed! Retrying...'
+            print('Login Failed! Retrying...')
 
     # Once logged in, try to reserve meal
     while True:
@@ -134,13 +135,17 @@ def execute_reserve_meal():
                 restaurant_name='Coast Poke Counter - Battery St.',
                 city_name='San Francisco')
             if status_code == 200:
-                print 'Reservation success!'
-                print 'Leave this script running to reschedule again the next day!'
+                print('Reservation success!')
+                print('Leave this script running to reschedule again the next day!')
                 return
             else:
-                print 'Reservation error, retrying!'
+                print('Reservation error, retrying!')
         except IndexError:
-            print "Retrying..."
+            print("Retrying...")
             time.sleep(0.05)
 
-scheduler.start()
+# scheduler.start()
+
+
+if __name__ == '__main__':
+    execute_reserve_meal()
