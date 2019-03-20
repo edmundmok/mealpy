@@ -7,6 +7,7 @@ venv:
 		install= -r requirements-dev.txt -rrequirements.txt \
 		bootstrap-deps= -r requirements-bootstrap.txt \
 		>/dev/null
+	venv/bin/pre-commit install --install-hooks
 
 .PHONY: test
 test: venv
