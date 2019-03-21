@@ -22,6 +22,8 @@ HEADERS = {
     'Content-Type': 'application/json',
 }
 
+SCHEDULER = BlockingScheduler()
+
 
 class MealPal(object):
 
@@ -31,10 +33,16 @@ class MealPal(object):
         self.cities = None
         self.schedules = None
 
-    def login(self, username, password):
-        data = {'username': username, 'password': password}
-        r = requests.post(
-            LOGIN_URL, data=json.dumps(data), headers=self.headers)
+    def login(self):
+        email = input('Enter email: ')
+        password = getpass.getpass('Enter password: ')
+
+        data = {
+            'username': email,
+            'password': password,
+        }
+
+        r = requests.post(LOGIN_URL, data=json.dumps(data), headers=self.headers)
         self.cookies = r.cookies
         self.cookies.set(LOGGED_IN_COOKIE, 'true', domain=BASE_URL)
         return r.status_code
@@ -107,20 +115,14 @@ class MealPal(object):
     def cancel_current_meal(self):
         pass
 
-scheduler = BlockingScheduler()
-print("Enter email: ")
-email = input()
-print("Enter password: ")
-password = getpass.getpass()
 
-
-@scheduler.scheduled_job('cron', hour=16, minute=59, second=58)
+@SCHEDULER.scheduled_job('cron', hour=16, minute=59, second=58)
 def execute_reserve_meal():
     mp = MealPal()
 
     # Try to login
     while True:
-        status_code = mp.login(email, password)
+        status_code = mp.login()
         if status_code == 200:
             print('Logged In!')
             break
@@ -144,7 +146,7 @@ def execute_reserve_meal():
             print("Retrying...")
             time.sleep(0.05)
 
-# scheduler.start()
+# SCHEDULER.start()
 
 
 if __name__ == '__main__':
