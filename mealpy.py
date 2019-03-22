@@ -97,10 +97,8 @@ class MealPal():
 
 
 SCHEDULER = BlockingScheduler()
-print('Enter email: ')
-EMAIL = input()
-print('Enter password: ')
-PASSWORD = getpass.getpass()
+EMAIL = input('Enter email: ')
+PASSWORD = getpass.getpass('Enter password: ')
 
 
 @SCHEDULER.scheduled_job('cron', hour=16, minute=59, second=58)
