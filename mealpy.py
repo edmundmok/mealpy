@@ -28,7 +28,6 @@ class MealPal():
     def __init__(self):
         self.cookies = None
         self.cities = None
-        self.schedules = None
 
     def login(self, username, password):
         data = {'username': username, 'password': password}
@@ -46,33 +45,28 @@ class MealPal():
         city = next((i for i in self.get_cities() if i['name'] == city_name), None)
         return city
 
-    def get_schedules(self, city_name, city_id=None):
-        if not city_id:
-            city_id = self.get_city(city_name)['objectId']
+    def get_schedules(self, city_name):
+        city_id = self.get_city(city_name)['objectId']
         request = requests.get(MENU_URL % city_id, headers=HEADERS, cookies=self.cookies)
         return request.json()['schedules']
 
-    def get_schedule_by_restaurant_name(self, restaurant_name, city_name=None, city_id=None):
+    def get_schedule_by_restaurant_name(self, restaurant_name, city_name):
         restaurant = next(
             i
-            for i in self.get_schedules(city_name, city_id)
+            for i in self.get_schedules(city_name)
             if i['restaurant']['name'] == restaurant_name
         )
         return restaurant
 
-    def get_schedule_by_meal_name(self, meal_name, city_name=None, city_id=None):
-        if not self.schedules:
-            self.get_schedules(city_name, city_id)
-
-        return next(i for i in self.get_schedules(city_name, city_id) if i['meal']['name'] == meal_name)
+    def get_schedule_by_meal_name(self, meal_name, city_name):
+        return next(i for i in self.get_schedules(city_name) if i['meal']['name'] == meal_name)
 
     def reserve_meal(
             self,
             timing,
+            city_name,
             restaurant_name=None,
             meal_name=None,
-            city_name=None,
-            city_id=None,
             cancel_current_meal=False,
     ):  # pylint: disable=too-many-arguments
         assert restaurant_name or meal_name
@@ -80,9 +74,9 @@ class MealPal():
             self.cancel_current_meal()
 
         if meal_name:
-            schedule_id = self.get_schedule_by_meal_name(meal_name, city_name, city_id)['id']
+            schedule_id = self.get_schedule_by_meal_name(meal_name, city_name)['id']
         else:
-            schedule_id = self.get_schedule_by_restaurant_name(restaurant_name, city_name, city_id)['id']
+            schedule_id = self.get_schedule_by_restaurant_name(restaurant_name, city_name)['id']
 
         reserve_data = {
             'quantity': 1,
