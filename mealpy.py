@@ -6,19 +6,19 @@ import requests
 from apscheduler.schedulers.blocking import BlockingScheduler
 
 BASE_DOMAIN = 'secure.mealpal.com'
-BASE_URL = 'https://' + BASE_DOMAIN
-LOGIN_URL = BASE_URL + '/1/login'
-CITIES_URL = BASE_URL + '/1/functions/getCitiesWithNeighborhoods'
-MENU_URL = BASE_URL + '/api/v1/cities/%s/product_offerings/lunch/menu'
-RESERVATION_URL = BASE_URL + '/api/v2/reservations'
-KITCHEN_URL = BASE_URL + '/1/functions/checkKitchen3'
+BASE_URL = f'https://{BASE_DOMAIN}'
+LOGIN_URL = f'{BASE_URL}/1/login'
+CITIES_URL = f'{BASE_URL}/1/functions/getCitiesWithNeighborhoods'
+MENU_URL = f'{BASE_URL}/api/v1/cities/{{}}/product_offerings/lunch/menu'
+RESERVATION_URL = f'{BASE_URL}/api/v2/reservations'
+KITCHEN_URL = f'{BASE_URL}/1/functions/checkKitchen3'
 
 LOGGED_IN_COOKIE = 'isLoggedIn'
 
 HEADERS = {
     'Host': BASE_DOMAIN,
     'Origin': BASE_URL,
-    'Referer': BASE_URL + '/login',
+    'Referer': f'{BASE_URL}/login',
     'Content-Type': 'application/json',
 }
 
@@ -47,7 +47,7 @@ class MealPal():
 
     def get_schedules(self, city_name):
         city_id = self.get_city(city_name)['objectId']
-        request = requests.get(MENU_URL % city_id, headers=HEADERS, cookies=self.cookies)
+        request = requests.get(MENU_URL.format(city_id), headers=HEADERS, cookies=self.cookies)
         return request.json()['schedules']
 
     def get_schedule_by_restaurant_name(self, restaurant_name, city_name):
