@@ -125,3 +125,4 @@ dmypy.json
 # Misc
 .*.swp
 .idea/
+/config.yaml

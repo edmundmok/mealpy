@@ -1,8 +1,10 @@
 import getpass
 import json
 import time
+from os import path
 
 import requests
+import strictyaml
 from apscheduler.schedulers.blocking import BlockingScheduler
 
 BASE_DOMAIN = 'secure.mealpal.com'
@@ -23,11 +25,20 @@ HEADERS = {
 }
 
 
+def load_config():
+    schema = strictyaml.Map({
+        'email_address': strictyaml.Email(),
+    })
+
+    root_dir = path.abspath(path.dirname(__file__))
+    with open(path.join(root_dir, 'config.yaml')) as config_file:
+        return strictyaml.load(config_file.read(), schema).data
+
+
 class MealPal():
 
     def __init__(self):
         self.cookies = None
-        self.cities = None
 
     def login(self, username, password):
         data = {'username': username, 'password': password}
@@ -97,8 +108,6 @@ class MealPal():
 
 
 SCHEDULER = BlockingScheduler()
-EMAIL = input('Enter email: ')
-PASSWORD = getpass.getpass('Enter password: ')
 
 
 @SCHEDULER.scheduled_job('cron', hour=16, minute=59, second=58)
@@ -136,4 +145,7 @@ def execute_reserve_meal():
 
 
 if __name__ == '__main__':
+    EMAIL = load_config()['email_address']
+    PASSWORD = getpass.getpass('Enter password: ')
+
     execute_reserve_meal()
