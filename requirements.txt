@@ -1,3 +1,4 @@
 apscheduler
+keyring
 requests
 strictyaml
