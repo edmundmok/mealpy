@@ -11,7 +11,9 @@ venv:
 
 .PHONY: test
 test: venv
-	true
+	venv/bin/coverage run -m pytest --strict tests/
+	venv/bin/coverage report --show-missing --skip-covered --fail-under 34 --omit 'tests/*'
+	venv/bin/coverage report --show-missing --skip-covered --fail-under 100 --include 'tests/*'
 
 .PHONY: clean
 clean: ## Clean working directory
