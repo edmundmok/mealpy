@@ -3,6 +3,7 @@ import json
 import time
 from os import path
 
+import keyring
 import requests
 import strictyaml
 from apscheduler.schedulers.blocking import BlockingScheduler
@@ -24,6 +25,11 @@ HEADERS = {
     'Content-Type': 'application/json',
 }
 
+KEYRING_SERVICENAME = BASE_DOMAIN
+
+# TODO(GH-4): Replace this feature toggle with cli option
+USE_KEYRING = False
+
 
 def load_config():
     schema = strictyaml.Map({
@@ -37,14 +43,22 @@ def load_config():
 
 class MealPal():
 
-    def __init__(self):
+    def __init__(self, user, password=None):
         self.cookies = None
+        self.user = user
+        self.password = password
 
-    def login(self, username, password):
-        data = {'username': username, 'password': password}
+    def login(self):
+        data = {
+            'username': self.user,
+            'password': self.password or keyring.get_password(KEYRING_SERVICENAME, self.user),
+        }
+
         request = requests.post(LOGIN_URL, data=json.dumps(data), headers=HEADERS)
+
         self.cookies = request.cookies
         self.cookies.set(LOGGED_IN_COOKIE, 'true', domain=BASE_URL)
+
         return request.status_code
 
     @staticmethod
@@ -112,11 +126,12 @@ SCHEDULER = BlockingScheduler()
 
 @SCHEDULER.scheduled_job('cron', hour=16, minute=59, second=58)
 def execute_reserve_meal():
-    mealpal = MealPal()
+
+    mealpal = MealPal(EMAIL, PASSWORD)
 
     # Try to login
     while True:
-        status_code = mealpal.login(EMAIL, PASSWORD)
+        status_code = mealpal.login()
         if status_code == 200:
             print('Logged In!')
             break
@@ -146,6 +161,17 @@ def execute_reserve_meal():
 
 if __name__ == '__main__':
     EMAIL = load_config()['email_address']
-    PASSWORD = getpass.getpass('Enter password: ')
+
+    if USE_KEYRING:
+        # If we're using keyring, we should always grab from keyring instead of holding on to potentially stale password
+        PASSWORD = None
+        if not keyring.get_password(KEYRING_SERVICENAME, EMAIL):
+            keyring.set_password(
+                KEYRING_SERVICENAME,
+                EMAIL,
+                getpass.getpass('Credential not yet stored in keychain, please enter password: '),
+            )
+    else:
+        PASSWORD = getpass.getpass('Enter password: ')
 
     execute_reserve_meal()
