@@ -116,7 +116,8 @@ class MealPal:
             'source': 'Web',
         }
 
-        request = requests.post(RESERVATION_URL, data=json.dumps(reserve_data), headers=HEADERS, cookies=self.cookies)
+        request = requests.post(RESERVATION_URL, data=json.dumps(reserve_data),
+                                headers=HEADERS, cookies=self.cookies)
         return request.status_code
 
     def get_current_meal(self):
@@ -127,23 +128,7 @@ class MealPal:
         raise NotImplementedError()
 
 
-@click.group()
-def cli_group():
-    pass
-
-
-@cli_group.command('save_pass', short_help='Save a password into the keyring.')
-def save_pass():
-    keyring.set_password(KEYRING_SERVICENAME, CONFIG['email_address'],
-                         getpass.getpass('Enter password: '))
-    print('Password successfully saved to keyring.')
-
-
-@cli_group.command('reserve', short_help='Reserve a meal on MealPal.')
-@click.argument('restaurant')
-@click.argument('time')
-@click.argument('city')
-def reserve(restaurant, time, city):
+def get_mealpal_credentials():
     email = CONFIG['email_address']
     if CONFIG['use_keyring']:
         password = (
@@ -154,11 +139,56 @@ def reserve(restaurant, time, city):
         keyring.set_password(KEYRING_SERVICENAME, email, password)
     else:
         password = getpass.getpass('Enter password: ')
+    return MealPal(email, password)
 
-    mealpal = MealPal(email, password)
-    execute_reserve_meal(mealpal, restaurant, time, city)
 
-cli = click.CommandCollection(sources=[cli_group])
+@click.group()
+@click.pass_context
+def login_group(ctx):
+    mealpal = get_mealpal_credentials()
+    ctx.obj['mealpal'] = mealpal
+
+
+@click.group()
+def non_login_group():
+    pass
+
+
+@non_login_group.command('save_pass', short_help='Save a password into the keyring.')
+def save_pass():
+    keyring.set_password(KEYRING_SERVICENAME, CONFIG['email_address'],
+                         getpass.getpass('Enter password: '))
+    print('Password successfully saved to keyring.')
+
+
+@login_group.command('get_restaurants',
+                   short_help='Display all available restaurants for the '
+                              'current window.')
+@click.pass_context
+def get_restaurants(ctx):
+    mealpal = ctx.obj['mealpal']
+    while True:
+        status_code = mealpal.login()
+        if status_code == 200:
+            print('Logged In!')
+            break
+        else:
+            print('Login Failed! Retrying...')
+
+    # Fetch all restaurants and allow interactive search on restaurants
+    pass
+    # import pdb; pdb.set_trace()
+
+
+@login_group.command('reserve', short_help='Reserve a meal on MealPal.')
+@click.argument('restaurant')
+@click.argument('time')
+@click.argument('city')
+@click.pass_context
+def reserve(ctx, restaurant, time, city):
+    execute_reserve_meal(ctx.obj['mealpal'], restaurant, time, city)
+
+cli = click.CommandCollection(sources=[login_group(obj={}), non_login_group(obj={})])
 
 
 # SCHEDULER = BlockingScheduler()
@@ -166,7 +196,6 @@ cli = click.CommandCollection(sources=[cli_group])
 def execute_reserve_meal(mealpal, restaurant, time, city):
     # Try to login
     while True:
-        # TODO: Get email and password from keyring etc.
         status_code = mealpal.login()
         if status_code == 200:
             print('Logged In!')
@@ -184,7 +213,7 @@ def execute_reserve_meal(mealpal, restaurant, time, city):
             )
             if status_code == 200:
                 print('Reservation success!')
-                print('Leave this script running to reschedule again the next day!')
+                # print('Leave this script running to reschedule again the next day!')
                 break
             else:
                 print('Reservation error, retrying!')
