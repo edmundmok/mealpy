@@ -3,6 +3,7 @@ import getpass
 import json
 import time
 from os import path
+from shutil import copyfile
 
 import keyring
 import requests
@@ -35,7 +36,12 @@ def load_config():
         'use_keyring': strictyaml.Bool()
     })
     root_dir = path.abspath(path.dirname(__file__))
-    with open(path.join(root_dir, 'config.yaml')) as config_file:
+    fname = path.join(root_dir, 'config.yaml')
+    # Create new file using template if not already existing
+    if not path.isfile(fname):
+        template = path.join(root_dir, 'config.template.yaml')
+        copyfile(template, fname)
+    with open(fname) as config_file:
         return strictyaml.load(config_file.read(), schema).data
 
 CONFIG = load_config()
@@ -126,8 +132,8 @@ def cli_group():
     pass
 
 
-@cli_group.command('save_user', short_help='Save a password into the keyring.')
-def save_user():
+@cli_group.command('save_pass', short_help='Save a password into the keyring.')
+def save_pass():
     keyring.set_password(KEYRING_SERVICENAME, CONFIG['email_address'],
                          getpass.getpass('Enter password: '))
     print('Password successfully saved to keyring.')
