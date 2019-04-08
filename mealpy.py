@@ -1,3 +1,4 @@
+import functools
 import getpass
 import json
 from os import path
@@ -139,37 +140,28 @@ def get_mealpal_credentials():
     return email, password
 
 
-@click.group()
-@click.pass_context
-def creds_required(ctx):
-    email, password = get_mealpal_credentials()
-    ctx.obj['mealpal'] = MealPal(email, password)
+# pylint: disable=invalid-name
+def initialize_mealpal(f):
+    @functools.wraps(f)
+    def wrapper(*args, **kwargs):
+        email, password = get_mealpal_credentials()
+        mealpal = MealPal(email, password)
+        return f(mealpal, *args, **kwargs)
+    return wrapper
 
 
 @click.group()
-def creds_not_required():
+def cli():
     pass
 
 
-@creds_not_required.command('save_pass', short_help='Save a password into the keyring.')
+@cli.command('save_pass', short_help='Save a password into the keyring.')
 def save_pass():
     keyring.set_password(
         KEYRING_SERVICENAME, CONFIG['email_address'],
         getpass.getpass('Enter password: '),
     )
     print('Password successfully saved to keyring.')
-
-
-@creds_required.command('reserve', short_help='Reserve a meal on MealPal.')
-@click.argument('restaurant')
-@click.argument('reservation_time')
-@click.argument('city')
-@click.pass_context
-def reserve(ctx, restaurant, reservation_time, city):
-    execute_reserve_meal(ctx.obj['mealpal'], restaurant, reservation_time, city)
-
-
-CLI = click.CommandCollection(sources=[creds_required(ctx={}), creds_not_required()])
 
 
 # SCHEDULER = BlockingScheduler()
@@ -205,5 +197,14 @@ def execute_reserve_meal(mealpal, restaurant, reservation_time, city):
 # SCHEDULER.start()
 
 
+@cli.command('reserve', short_help='Reserve a meal on MealPal.')
+@click.argument('restaurant')
+@click.argument('reservation_time')
+@click.argument('city')
+@initialize_mealpal
+def reserve(mealpal, restaurant, reservation_time, city):
+    execute_reserve_meal(mealpal, restaurant, reservation_time, city)
+
+
 if __name__ == '__main__':
-    CLI()
+    cli()
