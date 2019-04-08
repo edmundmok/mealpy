@@ -1,14 +1,12 @@
-import click
 import getpass
 import json
-import time
 from os import path
 from shutil import copyfile
 
+import click
 import keyring
 import requests
 import strictyaml
-from apscheduler.schedulers.blocking import BlockingScheduler
 
 BASE_DOMAIN = 'secure.mealpal.com'
 BASE_URL = f'https://{BASE_DOMAIN}'
@@ -33,7 +31,7 @@ KEYRING_SERVICENAME = BASE_DOMAIN
 def load_config():
     schema = strictyaml.Map({
         'email_address': strictyaml.Email(),
-        'use_keyring': strictyaml.Bool()
+        'use_keyring': strictyaml.Bool(),
     })
     root_dir = path.abspath(path.dirname(__file__))
     fname = path.join(root_dir, 'config.yaml')
@@ -43,6 +41,7 @@ def load_config():
         copyfile(template, fname)
     with open(fname) as config_file:
         return strictyaml.load(config_file.read(), schema).data
+
 
 CONFIG = load_config()
 
@@ -142,37 +141,40 @@ def get_mealpal_credentials():
 
 @click.group()
 @click.pass_context
-def login_group(ctx):
+def creds_required(ctx):
     email, password = get_mealpal_credentials()
     ctx.obj['mealpal'] = MealPal(email, password)
 
 
 @click.group()
-def non_login_group():
+def creds_not_required():
     pass
 
 
-@non_login_group.command('save_pass', short_help='Save a password into the keyring.')
+@creds_not_required.command('save_pass', short_help='Save a password into the keyring.')
 def save_pass():
-    keyring.set_password(KEYRING_SERVICENAME, CONFIG['email_address'],
-                         getpass.getpass('Enter password: '))
+    keyring.set_password(
+        KEYRING_SERVICENAME, CONFIG['email_address'],
+        getpass.getpass('Enter password: '),
+    )
     print('Password successfully saved to keyring.')
 
 
-@login_group.command('reserve', short_help='Reserve a meal on MealPal.')
+@creds_required.command('reserve', short_help='Reserve a meal on MealPal.')
 @click.argument('restaurant')
-@click.argument('time')
+@click.argument('reservation_time')
 @click.argument('city')
 @click.pass_context
-def reserve(ctx, restaurant, time, city):
-    execute_reserve_meal(ctx.obj['mealpal'], restaurant, time, city)
+def reserve(ctx, restaurant, reservation_time, city):
+    execute_reserve_meal(ctx.obj['mealpal'], restaurant, reservation_time, city)
 
-cli = click.CommandCollection(sources=[login_group(obj={}), non_login_group(obj={})])
+
+CLI = click.CommandCollection(sources=[creds_required(ctx={}), creds_not_required()])
 
 
 # SCHEDULER = BlockingScheduler()
 # @SCHEDULER.scheduled_job('cron', hour=16, minute=59, second=58)
-def execute_reserve_meal(mealpal, restaurant, time, city):
+def execute_reserve_meal(mealpal, restaurant, reservation_time, city):
     # Try to login
     while True:
         status_code = mealpal.login()
@@ -186,7 +188,7 @@ def execute_reserve_meal(mealpal, restaurant, time, city):
     while True:
         try:
             status_code = mealpal.reserve_meal(
-                time,
+                reservation_time,
                 restaurant_name=restaurant,
                 city_name=city,
             )
@@ -198,10 +200,10 @@ def execute_reserve_meal(mealpal, restaurant, time, city):
                 print('Reservation error, retrying!')
         except IndexError:
             print('Retrying...')
-            time.sleep(0.05)
+            reservation_time.sleep(0.05)
 
 # SCHEDULER.start()
 
 
 if __name__ == '__main__':
-    cli()
+    CLI()
