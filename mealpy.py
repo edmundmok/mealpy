@@ -116,8 +116,7 @@ class MealPal:
             'source': 'Web',
         }
 
-        request = requests.post(RESERVATION_URL, data=json.dumps(reserve_data),
-                                headers=HEADERS, cookies=self.cookies)
+        request = requests.post(RESERVATION_URL, data=json.dumps(reserve_data), headers=HEADERS, cookies=self.cookies)
         return request.status_code
 
     def get_current_meal(self):
@@ -159,25 +158,6 @@ def save_pass():
     keyring.set_password(KEYRING_SERVICENAME, CONFIG['email_address'],
                          getpass.getpass('Enter password: '))
     print('Password successfully saved to keyring.')
-
-
-@login_group.command('get_restaurants',
-                   short_help='Display all available restaurants for the '
-                              'current window.')
-@click.pass_context
-def get_restaurants(ctx):
-    mealpal = ctx.obj['mealpal']
-    while True:
-        status_code = mealpal.login()
-        if status_code == 200:
-            print('Logged In!')
-            break
-        else:
-            print('Login Failed! Retrying...')
-
-    # Fetch all restaurants and allow interactive search on restaurants
-    pass
-    # import pdb; pdb.set_trace()
 
 
 @login_group.command('reserve', short_help='Reserve a meal on MealPal.')
