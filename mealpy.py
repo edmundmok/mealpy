@@ -132,8 +132,7 @@ def get_mealpal_credentials():
     if CONFIG['use_keyring']:
         password = (
             keyring.get_password(KEYRING_SERVICENAME, email)
-            or getpass.getpass('Credential not yet stored in keychain, '
-                               'please enter password: ')
+            or getpass.getpass('Credential not yet stored in keychain, please enter password: ')
         )
         keyring.set_password(KEYRING_SERVICENAME, email, password)
     else:
