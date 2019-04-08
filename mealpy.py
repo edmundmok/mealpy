@@ -138,14 +138,14 @@ def get_mealpal_credentials():
         keyring.set_password(KEYRING_SERVICENAME, email, password)
     else:
         password = getpass.getpass('Enter password: ')
-    return MealPal(email, password)
+    return email, password
 
 
 @click.group()
 @click.pass_context
 def login_group(ctx):
-    mealpal = get_mealpal_credentials()
-    ctx.obj['mealpal'] = mealpal
+    email, password = get_mealpal_credentials()
+    ctx.obj['mealpal'] = MealPal(email, password)
 
 
 @click.group()
