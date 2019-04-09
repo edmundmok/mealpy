@@ -1,6 +1,7 @@
 import functools
 import getpass
 import json
+import time
 from os import path
 from shutil import copyfile
 
@@ -192,7 +193,7 @@ def execute_reserve_meal(mealpal, restaurant, reservation_time, city):
                 print('Reservation error, retrying!')
         except IndexError:
             print('Retrying...')
-            reservation_time.sleep(0.05)
+            time.sleep(0.05)
 
 # SCHEDULER.start()
 
