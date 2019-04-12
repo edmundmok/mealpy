@@ -7,3 +7,6 @@ max-line-length=120
 disable=
     missing-docstring,
     fixme
+
+[DESIGN]
+ignored-argument-names=^_.*|^mock_

@@ -5,3 +5,4 @@ pre-commit
 pudb
 pylint
 pytest
+responses
