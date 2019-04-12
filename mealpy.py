@@ -3,6 +3,7 @@ import getpass
 import json
 import time
 from os import path
+from shutil import copyfile
 
 import click
 import keyring
@@ -41,11 +42,14 @@ def load_config():
     template_config_path = path.join(root_dir, 'config.template.yaml')
     config_path = path.join(root_dir, 'config.yaml')
 
-    config = load_config_from_file(template_config_path, schema)
-
+    # Create config file if it doesn't already exist
     if not path.isfile(config_path):
-        return config
+        copyfile(template_config_path, config_path)
+        print('config.yaml has been created in your current directory.')
+        print('Please update the email_address field in config.yaml with your email address for MealPal.')
+        exit(0)
 
+    config = load_config_from_file(template_config_path, schema)
     config.update(load_config_from_file(config_path, schema))
     return config
 
