@@ -17,8 +17,6 @@ MENU_URL = f'{BASE_URL}/api/v1/cities/{{}}/product_offerings/lunch/menu'
 RESERVATION_URL = f'{BASE_URL}/api/v2/reservations'
 KITCHEN_URL = f'{BASE_URL}/1/functions/checkKitchen3'
 
-LOGGED_IN_COOKIE = 'isLoggedIn'
-
 HEADERS = {
     'Host': BASE_DOMAIN,
     'Origin': BASE_URL,
@@ -66,10 +64,7 @@ class MealPal:
         }
 
         request = requests.post(LOGIN_URL, data=json.dumps(data), headers=HEADERS)
-
         self.cookies = request.cookies
-        self.cookies.set(LOGGED_IN_COOKIE, 'true', domain=BASE_URL)
-
         return request.status_code
 
     @staticmethod
