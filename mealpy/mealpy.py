@@ -72,6 +72,7 @@ class MealPal:
 
     def get_cities(self):
         request = self.session.post(CITIES_URL)
+        request.raise_for_status()
         return request.json()['result']
 
     def get_city(self, city_name):

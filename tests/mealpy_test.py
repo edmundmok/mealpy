@@ -1,4 +1,5 @@
 import pytest
+import requests
 import responses
 
 from mealpy import mealpy
@@ -99,3 +100,15 @@ def test_get_city_not_found(mock_responses):
     city = mealpal.get_city('Not San Francisco')
 
     assert not city
+
+
+def test_get_city_bad_response(mock_responses):
+    mock_responses.add(
+        responses.RequestsMock.POST,
+        mealpy.CITIES_URL,
+        status=400,
+    )
+
+    mealpal = mealpy.MealPal()
+    with pytest.raises(requests.exceptions.HTTPError):
+        mealpal.get_city('Not San Francisco')
