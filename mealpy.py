@@ -3,7 +3,6 @@ import getpass
 import json
 import time
 from os import path
-from shutil import copyfile
 
 import click
 import keyring
@@ -30,19 +29,27 @@ HEADERS = {
 KEYRING_SERVICENAME = BASE_DOMAIN
 
 
+def load_config_from_file(file_path, schema):
+    with open(file_path) as config_file:
+        return strictyaml.load(config_file.read(), schema).data
+
+
 def load_config():
     schema = strictyaml.Map({
         'email_address': strictyaml.Email(),
         'use_keyring': strictyaml.Bool(),
     })
     root_dir = path.abspath(path.dirname(__file__))
-    fname = path.join(root_dir, 'config.yaml')
-    # Create new file using template if not already existing
-    if not path.isfile(fname):
-        template = path.join(root_dir, 'config.template.yaml')
-        copyfile(template, fname)
-    with open(fname) as config_file:
-        return strictyaml.load(config_file.read(), schema).data
+    template_config_path = path.join(root_dir, 'config.template.yaml')
+    config_path = path.join(root_dir, 'config.yaml')
+
+    config = load_config_from_file(template_config_path, schema)
+
+    if not path.isfile(config_path):
+        return config
+
+    config.update(load_config_from_file(config_path, schema))
+    return config
 
 
 class MealPal:
