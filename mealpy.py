@@ -45,9 +45,6 @@ def load_config():
         return strictyaml.load(config_file.read(), schema).data
 
 
-CONFIG = load_config()
-
-
 class MealPal:
 
     def __init__(self, user, password):
@@ -129,8 +126,9 @@ class MealPal:
 
 
 def get_mealpal_credentials():
-    email = CONFIG['email_address']
-    if CONFIG['use_keyring']:
+    config = load_config()
+    email = config['email_address']
+    if config['use_keyring']:
         password = (
             keyring.get_password(KEYRING_SERVICENAME, email)
             or getpass.getpass('Credential not yet stored in keychain, please enter password: ')
@@ -159,7 +157,7 @@ def cli():
 @cli.command('save_pass', short_help='Save a password into the keyring.')
 def save_pass():
     keyring.set_password(
-        KEYRING_SERVICENAME, CONFIG['email_address'],
+        KEYRING_SERVICENAME, load_config()['email_address'],
         getpass.getpass('Enter password: '),
     )
     print('Password successfully saved to keyring.')
