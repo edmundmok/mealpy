@@ -47,7 +47,7 @@ def load_config():
         copyfile(template_config_path, config_path)
         print('config.yaml has been created in your current directory.')
         print('Please update the email_address field in config.yaml with your email address for MealPal.')
-        exit(0)
+        exit(1)
 
     config = load_config_from_file(template_config_path, schema)
     config.update(load_config_from_file(config_path, schema))
