@@ -27,6 +27,8 @@ HEADERS = {
 
 KEYRING_SERVICENAME = BASE_DOMAIN
 
+CONFIG_FILENAME = 'config.yaml'
+
 
 def load_config_from_file(file_path, schema):
     with open(file_path) as config_file:
@@ -40,13 +42,13 @@ def load_config():
     })
     root_dir = path.abspath(path.dirname(__file__))
     template_config_path = path.join(root_dir, 'config.template.yaml')
-    config_path = path.join(root_dir, 'config.yaml')
+    config_path = path.join(root_dir, CONFIG_FILENAME)
 
     # Create config file if it doesn't already exist
     if not path.isfile(config_path):
         copyfile(template_config_path, config_path)
-        print('config.yaml has been created in your current directory.')
-        print('Please update the email_address field in config.yaml with your email address for MealPal.')
+        print(f'{CONFIG_FILENAME} has been created in your current directory.')
+        print(f'Please update the email_address field in {CONFIG_FILENAME} with your email address for MealPal.')
         exit(1)
 
     config = load_config_from_file(template_config_path, schema)
