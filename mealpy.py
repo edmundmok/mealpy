@@ -1,4 +1,3 @@
-import functools
 import getpass
 import json
 import time
@@ -58,17 +57,14 @@ def load_config():
 
 class MealPal:
 
-    def __init__(self, user, password):
+    def __init__(self):
         self.cookies = None
-        self.user = user
-        self.password = password
 
-    def login(self):
+    def login(self, user, password):
         data = {
-            'username': self.user,
-            'password': self.password,
+            'username': user,
+            'password': password,
         }
-
         request = requests.post(LOGIN_URL, data=json.dumps(data), headers=HEADERS)
         self.cookies = request.cookies
         return request.status_code
@@ -147,16 +143,6 @@ def get_mealpal_credentials():
     return email, password
 
 
-# pylint: disable=invalid-name
-def initialize_mealpal(f):
-    @functools.wraps(f)
-    def wrapper(*args, **kwargs):
-        email, password = get_mealpal_credentials()
-        mealpal = MealPal(email, password)
-        return f(mealpal, *args, **kwargs)
-    return wrapper
-
-
 @click.group()
 def cli():
     pass
@@ -173,10 +159,13 @@ def save_pass():
 
 # SCHEDULER = BlockingScheduler()
 # @SCHEDULER.scheduled_job('cron', hour=16, minute=59, second=58)
-def execute_reserve_meal(mealpal, restaurant, reservation_time, city):
+def execute_reserve_meal(restaurant, reservation_time, city):
+    email, password = get_mealpal_credentials()
+    mealpal = MealPal()
+
     # Try to login
     while True:
-        status_code = mealpal.login()
+        status_code = mealpal.login(email, password)
         if status_code == 200:
             print('Logged In!')
             break
@@ -208,9 +197,8 @@ def execute_reserve_meal(mealpal, restaurant, reservation_time, city):
 @click.argument('restaurant')
 @click.argument('reservation_time')
 @click.argument('city')
-@initialize_mealpal
-def reserve(mealpal, restaurant, reservation_time, city):
-    execute_reserve_meal(mealpal, restaurant, reservation_time, city)
+def reserve(restaurant, reservation_time, city):
+    execute_reserve_meal(restaurant, reservation_time, city)
 
 
 if __name__ == '__main__':
