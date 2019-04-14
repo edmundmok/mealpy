@@ -2,11 +2,12 @@ import getpass
 import json
 import time
 from os import path
+from shutil import copyfile
 
+import click
 import keyring
 import requests
 import strictyaml
-from apscheduler.schedulers.blocking import BlockingScheduler
 
 BASE_DOMAIN = 'secure.mealpal.com'
 BASE_URL = f'https://{BASE_DOMAIN}'
@@ -15,8 +16,6 @@ CITIES_URL = f'{BASE_URL}/1/functions/getCitiesWithNeighborhoods'
 MENU_URL = f'{BASE_URL}/api/v1/cities/{{}}/product_offerings/lunch/menu'
 RESERVATION_URL = f'{BASE_URL}/api/v2/reservations'
 KITCHEN_URL = f'{BASE_URL}/1/functions/checkKitchen3'
-
-LOGGED_IN_COOKIE = 'isLoggedIn'
 
 HEADERS = {
     'Host': BASE_DOMAIN,
@@ -27,38 +26,47 @@ HEADERS = {
 
 KEYRING_SERVICENAME = BASE_DOMAIN
 
-# TODO(GH-4): Replace this feature toggle with cli option
-USE_KEYRING = False
+CONFIG_FILENAME = 'config.yaml'
+
+
+def load_config_from_file(file_path, schema):
+    with open(file_path) as config_file:
+        return strictyaml.load(config_file.read(), schema).data
 
 
 def load_config():
     schema = strictyaml.Map({
         'email_address': strictyaml.Email(),
+        'use_keyring': strictyaml.Bool(),
     })
-
     root_dir = path.abspath(path.dirname(__file__))
-    with open(path.join(root_dir, 'config.yaml')) as config_file:
-        return strictyaml.load(config_file.read(), schema).data
+    template_config_path = path.join(root_dir, 'config.template.yaml')
+    config_path = path.join(root_dir, CONFIG_FILENAME)
+
+    # Create config file if it doesn't already exist
+    if not path.isfile(config_path):
+        copyfile(template_config_path, config_path)
+        print(f'{CONFIG_FILENAME} has been created in your current directory.')
+        print(f'Please update the email_address field in {CONFIG_FILENAME} with your email address for MealPal.')
+        exit(1)
+
+    config = load_config_from_file(template_config_path, schema)
+    config.update(load_config_from_file(config_path, schema))
+    return config
 
 
-class MealPal():
+class MealPal:
 
-    def __init__(self, user, password=None):
+    def __init__(self):
         self.cookies = None
-        self.user = user
-        self.password = password
 
-    def login(self):
+    def login(self, user, password):
         data = {
-            'username': self.user,
-            'password': self.password or keyring.get_password(KEYRING_SERVICENAME, self.user),
+            'username': user,
+            'password': password,
         }
-
         request = requests.post(LOGIN_URL, data=json.dumps(data), headers=HEADERS)
-
         self.cookies = request.cookies
-        self.cookies.set(LOGGED_IN_COOKIE, 'true', domain=BASE_URL)
-
         return request.status_code
 
     @staticmethod
@@ -121,17 +129,43 @@ class MealPal():
         raise NotImplementedError()
 
 
-SCHEDULER = BlockingScheduler()
+def get_mealpal_credentials():
+    config = load_config()
+    email = config['email_address']
+    if config['use_keyring']:
+        password = (
+            keyring.get_password(KEYRING_SERVICENAME, email)
+            or getpass.getpass('Credential not yet stored in keychain, please enter password: ')
+        )
+        keyring.set_password(KEYRING_SERVICENAME, email, password)
+    else:
+        password = getpass.getpass('Enter password: ')
+    return email, password
 
 
-@SCHEDULER.scheduled_job('cron', hour=16, minute=59, second=58)
-def execute_reserve_meal():
+@click.group()
+def cli():
+    pass
 
-    mealpal = MealPal(EMAIL, PASSWORD)
+
+@cli.command('save_pass', short_help='Save a password into the keyring.')
+def save_pass():
+    keyring.set_password(
+        KEYRING_SERVICENAME, load_config()['email_address'],
+        getpass.getpass('Enter password: '),
+    )
+    print('Password successfully saved to keyring.')
+
+
+# SCHEDULER = BlockingScheduler()
+# @SCHEDULER.scheduled_job('cron', hour=16, minute=59, second=58)
+def execute_reserve_meal(restaurant, reservation_time, city):
+    email, password = get_mealpal_credentials()
+    mealpal = MealPal()
 
     # Try to login
     while True:
-        status_code = mealpal.login()
+        status_code = mealpal.login(email, password)
         if status_code == 200:
             print('Logged In!')
             break
@@ -142,13 +176,13 @@ def execute_reserve_meal():
     while True:
         try:
             status_code = mealpal.reserve_meal(
-                '12:15pm-12:30pm',
-                restaurant_name='Coast Poke Counter - Battery St.',
-                city_name='San Francisco',
+                reservation_time,
+                restaurant_name=restaurant,
+                city_name=city,
             )
             if status_code == 200:
                 print('Reservation success!')
-                print('Leave this script running to reschedule again the next day!')
+                # print('Leave this script running to reschedule again the next day!')
                 break
             else:
                 print('Reservation error, retrying!')
@@ -159,19 +193,13 @@ def execute_reserve_meal():
 # SCHEDULER.start()
 
 
+@cli.command('reserve', short_help='Reserve a meal on MealPal.')
+@click.argument('restaurant')
+@click.argument('reservation_time')
+@click.argument('city')
+def reserve(restaurant, reservation_time, city):
+    execute_reserve_meal(restaurant, reservation_time, city)
+
+
 if __name__ == '__main__':
-    EMAIL = load_config()['email_address']
-
-    if USE_KEYRING:
-        # If we're using keyring, we should always grab from keyring instead of holding on to potentially stale password
-        PASSWORD = None
-        if not keyring.get_password(KEYRING_SERVICENAME, EMAIL):
-            keyring.set_password(
-                KEYRING_SERVICENAME,
-                EMAIL,
-                getpass.getpass('Credential not yet stored in keychain, please enter password: '),
-            )
-    else:
-        PASSWORD = getpass.getpass('Enter password: ')
-
-    execute_reserve_meal()
+    cli()
