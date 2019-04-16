@@ -147,17 +147,27 @@ def initialize_mealpal():
             mealpal.cookies = pickle.load(cookies_file)
 
         # hacky way of validating cookies
-        try:
-            mealpal.get_schedules('San Francisco')
-            print('Login using cookies successful!')
-            return mealpal
-        except Exception:  # pylint: disable=broad-except
-            print('Existing cookies are invalid, please re-enter your login credentials.')
+        multiplier = 1
+        for _ in range(5):
+            try:
+                mealpal.get_schedules('San Francisco')
+            except Exception:  # pylint: disable=broad-except
+                # Possible fluke, retry validation
+                sleep_duration = 1 * multiplier
+                print(f'Login using cookies failed, retrying after {sleep_duration} second(s).')
+                time.sleep(sleep_duration)
+                multiplier *= 2
+            else:
+                print('Login using cookies successful!')
+                return mealpal
 
-    is_logged_in = False
-    while not is_logged_in:
+        print('Existing cookies are invalid, please re-enter your login credentials.')
+
+    while True:
         email, password = get_mealpal_credentials()
-        is_logged_in = mealpal.login(email, password) == 200
+        if mealpal.login(email, password) == 200:
+            break
+        print('Invalid login credentials, please try again!')
 
     # save latest cookies
     print(f'Login successful! Saving cookies as {COOKIES_FILENAME}.')
