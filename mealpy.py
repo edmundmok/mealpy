@@ -1,11 +1,11 @@
 import getpass
 import json
+import pickle
 import time
 from os import path
 from shutil import copyfile
 
 import click
-import keyring
 import requests
 import strictyaml
 
@@ -27,6 +27,7 @@ HEADERS = {
 KEYRING_SERVICENAME = BASE_DOMAIN
 
 CONFIG_FILENAME = 'config.yaml'
+COOKIES_FILENAME = 'cookies.pickle'
 
 
 def load_config_from_file(file_path, schema):
@@ -132,15 +133,38 @@ class MealPal:
 def get_mealpal_credentials():
     config = load_config()
     email = config['email_address']
-    if config['use_keyring']:
-        password = (
-            keyring.get_password(KEYRING_SERVICENAME, email)
-            or getpass.getpass('Credential not yet stored in keychain, please enter password: ')
-        )
-        keyring.set_password(KEYRING_SERVICENAME, email, password)
-    else:
-        password = getpass.getpass('Enter password: ')
+    password = getpass.getpass('Enter password: ')
     return email, password
+
+
+def initialize_mealpal():
+    root_dir = path.abspath(path.dirname(__file__))
+    cookies_path = path.join(root_dir, COOKIES_FILENAME)
+    mealpal = MealPal()
+
+    if path.isfile(cookies_path):
+        with open(cookies_path, 'rb') as cookies_file:
+            mealpal.cookies = pickle.load(cookies_file)
+
+        # hacky way of validating cookies
+        try:
+            mealpal.get_schedules('San Francisco')
+            print('Login using cookies successful!')
+            return mealpal
+        except Exception:  # pylint: disable=broad-except
+            print('Existing cookies are invalid, please re-enter your login credentials.')
+
+    is_logged_in = False
+    while not is_logged_in:
+        email, password = get_mealpal_credentials()
+        is_logged_in = mealpal.login(email, password) == 200
+
+    # save latest cookies
+    print(f'Login successful! Saving cookies as {COOKIES_FILENAME}.')
+    with open(cookies_path, 'wb') as cookies_file:
+        pickle.dump(mealpal.cookies, cookies_file)
+
+    return mealpal
 
 
 @click.group()
@@ -148,31 +172,11 @@ def cli():
     pass
 
 
-@cli.command('save_pass', short_help='Save a password into the keyring.')
-def save_pass():
-    keyring.set_password(
-        KEYRING_SERVICENAME, load_config()['email_address'],
-        getpass.getpass('Enter password: '),
-    )
-    print('Password successfully saved to keyring.')
-
-
 # SCHEDULER = BlockingScheduler()
 # @SCHEDULER.scheduled_job('cron', hour=16, minute=59, second=58)
 def execute_reserve_meal(restaurant, reservation_time, city):
-    email, password = get_mealpal_credentials()
-    mealpal = MealPal()
+    mealpal = initialize_mealpal()
 
-    # Try to login
-    while True:
-        status_code = mealpal.login(email, password)
-        if status_code == 200:
-            print('Logged In!')
-            break
-        else:
-            print('Login Failed! Retrying...')
-
-    # Once logged in, try to reserve meal
     while True:
         try:
             status_code = mealpal.reserve_meal(
