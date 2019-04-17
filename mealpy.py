@@ -1,7 +1,7 @@
 import getpass
 import json
-import pickle
 import time
+from http.cookiejar import MozillaCookieJar
 from os import path
 from shutil import copyfile
 
@@ -27,7 +27,7 @@ HEADERS = {
 KEYRING_SERVICENAME = BASE_DOMAIN
 
 CONFIG_FILENAME = 'config.yaml'
-COOKIES_FILENAME = 'cookies.pickle'
+COOKIES_FILENAME = 'cookies.txt'
 
 
 def load_config_from_file(file_path, schema):
@@ -59,20 +59,19 @@ def load_config():
 class MealPal:
 
     def __init__(self):
-        self.cookies = None
+        self.session = requests.Session()
+        self.session.headers.update(HEADERS)
 
     def login(self, user, password):
         data = {
             'username': user,
             'password': password,
         }
-        request = requests.post(LOGIN_URL, data=json.dumps(data), headers=HEADERS)
-        self.cookies = request.cookies
+        request = self.session.post(LOGIN_URL, data=json.dumps(data))
         return request.status_code
 
-    @staticmethod
-    def get_cities():
-        request = requests.post(CITIES_URL, headers=HEADERS)
+    def get_cities(self):
+        request = self.session.post(CITIES_URL)
         return request.json()['result']
 
     def get_city(self, city_name):
@@ -81,7 +80,7 @@ class MealPal:
 
     def get_schedules(self, city_name):
         city_id = self.get_city(city_name)['objectId']
-        request = requests.get(MENU_URL.format(city_id), headers=HEADERS, cookies=self.cookies)
+        request = self.session.get(MENU_URL.format(city_id))
         request.raise_for_status()
         return request.json()['schedules']
 
@@ -120,11 +119,11 @@ class MealPal:
             'source': 'Web',
         }
 
-        request = requests.post(RESERVATION_URL, data=json.dumps(reserve_data), headers=HEADERS, cookies=self.cookies)
+        request = self.session.post(RESERVATION_URL, data=json.dumps(reserve_data))
         return request.status_code
 
     def get_current_meal(self):
-        request = requests.post(KITCHEN_URL, headers=HEADERS, cookies=self.cookies)
+        request = self.session.post(KITCHEN_URL)
         return request.json()
 
     def cancel_current_meal(self):
@@ -142,24 +141,27 @@ def initialize_mealpal():
     root_dir = path.abspath(path.dirname(__file__))
     cookies_path = path.join(root_dir, COOKIES_FILENAME)
     mealpal = MealPal()
+    mealpal.session.cookies = MozillaCookieJar()
 
     if path.isfile(cookies_path):
-        with open(cookies_path, 'rb') as cookies_file:
-            mealpal.cookies = pickle.load(cookies_file)
-
-        # hacky way of validating cookies
-        sleep_duration = 1
-        for _ in range(5):
-            try:
-                mealpal.get_schedules('San Francisco')
-            except requests.HTTPError:
-                # Possible fluke, retry validation
-                print(f'Login using cookies failed, retrying after {sleep_duration} second(s).')
-                time.sleep(sleep_duration)
-                sleep_duration *= 2
-            else:
-                print('Login using cookies successful!')
-                return mealpal
+        try:
+            mealpal.session.cookies.load(cookies_path, ignore_expires=True, ignore_discard=True)
+        except UnicodeDecodeError:
+            pass
+        else:
+            # hacky way of validating cookies
+            sleep_duration = 1
+            for _ in range(5):
+                try:
+                    mealpal.get_schedules('San Francisco')
+                except requests.HTTPError:
+                    # Possible fluke, retry validation
+                    print(f'Login using cookies failed, retrying after {sleep_duration} second(s).')
+                    time.sleep(sleep_duration)
+                    sleep_duration *= 2
+                else:
+                    print('Login using cookies successful!')
+                    return mealpal
 
         print('Existing cookies are invalid, please re-enter your login credentials.')
 
@@ -171,8 +173,7 @@ def initialize_mealpal():
 
     # save latest cookies
     print(f'Login successful! Saving cookies as {COOKIES_FILENAME}.')
-    with open(cookies_path, 'wb') as cookies_file:
-        pickle.dump(mealpal.cookies, cookies_file)
+    mealpal.session.cookies.save(cookies_path, ignore_discard=True, ignore_expires=True)
 
     return mealpal
 
