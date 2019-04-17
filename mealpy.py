@@ -82,6 +82,7 @@ class MealPal:
     def get_schedules(self, city_name):
         city_id = self.get_city(city_name)['objectId']
         request = requests.get(MENU_URL.format(city_id), headers=HEADERS, cookies=self.cookies)
+        request.raise_for_status()
         return request.json()['schedules']
 
     def get_schedule_by_restaurant_name(self, restaurant_name, city_name):
@@ -151,7 +152,7 @@ def initialize_mealpal():
         for _ in range(5):
             try:
                 mealpal.get_schedules('San Francisco')
-            except Exception:  # pylint: disable=broad-except
+            except requests.HTTPError:
                 # Possible fluke, retry validation
                 print(f'Login using cookies failed, retrying after {sleep_duration} second(s).')
                 time.sleep(sleep_duration)
