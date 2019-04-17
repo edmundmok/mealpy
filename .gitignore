@@ -126,4 +126,4 @@ dmypy.json
 .*.swp
 .idea/
 /config.yaml
-cookies.pickle
+cookies.txt
