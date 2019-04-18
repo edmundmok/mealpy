@@ -1,5 +1,4 @@
 apscheduler
 click
-keyring
 requests
 strictyaml

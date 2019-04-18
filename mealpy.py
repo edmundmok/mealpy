@@ -1,11 +1,11 @@
 import getpass
 import json
 import time
+from http.cookiejar import MozillaCookieJar
 from os import path
 from shutil import copyfile
 
 import click
-import keyring
 import requests
 import strictyaml
 
@@ -27,6 +27,7 @@ HEADERS = {
 KEYRING_SERVICENAME = BASE_DOMAIN
 
 CONFIG_FILENAME = 'config.yaml'
+COOKIES_FILENAME = 'cookies.txt'
 
 
 def load_config_from_file(file_path, schema):
@@ -58,20 +59,19 @@ def load_config():
 class MealPal:
 
     def __init__(self):
-        self.cookies = None
+        self.session = requests.Session()
+        self.session.headers.update(HEADERS)
 
     def login(self, user, password):
         data = {
             'username': user,
             'password': password,
         }
-        request = requests.post(LOGIN_URL, data=json.dumps(data), headers=HEADERS)
-        self.cookies = request.cookies
+        request = self.session.post(LOGIN_URL, data=json.dumps(data))
         return request.status_code
 
-    @staticmethod
-    def get_cities():
-        request = requests.post(CITIES_URL, headers=HEADERS)
+    def get_cities(self):
+        request = self.session.post(CITIES_URL)
         return request.json()['result']
 
     def get_city(self, city_name):
@@ -80,7 +80,8 @@ class MealPal:
 
     def get_schedules(self, city_name):
         city_id = self.get_city(city_name)['objectId']
-        request = requests.get(MENU_URL.format(city_id), headers=HEADERS, cookies=self.cookies)
+        request = self.session.get(MENU_URL.format(city_id))
+        request.raise_for_status()
         return request.json()['schedules']
 
     def get_schedule_by_restaurant_name(self, restaurant_name, city_name):
@@ -118,11 +119,11 @@ class MealPal:
             'source': 'Web',
         }
 
-        request = requests.post(RESERVATION_URL, data=json.dumps(reserve_data), headers=HEADERS, cookies=self.cookies)
+        request = self.session.post(RESERVATION_URL, data=json.dumps(reserve_data))
         return request.status_code
 
     def get_current_meal(self):
-        request = requests.post(KITCHEN_URL, headers=HEADERS, cookies=self.cookies)
+        request = self.session.post(KITCHEN_URL)
         return request.json()
 
     def cancel_current_meal(self):
@@ -132,15 +133,49 @@ class MealPal:
 def get_mealpal_credentials():
     config = load_config()
     email = config['email_address']
-    if config['use_keyring']:
-        password = (
-            keyring.get_password(KEYRING_SERVICENAME, email)
-            or getpass.getpass('Credential not yet stored in keychain, please enter password: ')
-        )
-        keyring.set_password(KEYRING_SERVICENAME, email, password)
-    else:
-        password = getpass.getpass('Enter password: ')
+    password = getpass.getpass('Enter password: ')
     return email, password
+
+
+def initialize_mealpal():
+    root_dir = path.abspath(path.dirname(__file__))
+    cookies_path = path.join(root_dir, COOKIES_FILENAME)
+    mealpal = MealPal()
+    mealpal.session.cookies = MozillaCookieJar()
+
+    if path.isfile(cookies_path):
+        try:
+            mealpal.session.cookies.load(cookies_path, ignore_expires=True, ignore_discard=True)
+        except UnicodeDecodeError:
+            pass
+        else:
+            # hacky way of validating cookies
+            sleep_duration = 1
+            for _ in range(5):
+                try:
+                    mealpal.get_schedules('San Francisco')
+                except requests.HTTPError:
+                    # Possible fluke, retry validation
+                    print(f'Login using cookies failed, retrying after {sleep_duration} second(s).')
+                    time.sleep(sleep_duration)
+                    sleep_duration *= 2
+                else:
+                    print('Login using cookies successful!')
+                    return mealpal
+
+        print('Existing cookies are invalid, please re-enter your login credentials.')
+
+    while True:
+        email, password = get_mealpal_credentials()
+        if mealpal.login(email, password) == 200:
+            break
+        print('Invalid login credentials, please try again!')
+
+    # save latest cookies
+    print(f'Login successful! Saving cookies as {COOKIES_FILENAME}.')
+    mealpal.session.cookies.save(cookies_path, ignore_discard=True, ignore_expires=True)
+
+    return mealpal
 
 
 @click.group()
@@ -148,31 +183,11 @@ def cli():
     pass
 
 
-@cli.command('save_pass', short_help='Save a password into the keyring.')
-def save_pass():
-    keyring.set_password(
-        KEYRING_SERVICENAME, load_config()['email_address'],
-        getpass.getpass('Enter password: '),
-    )
-    print('Password successfully saved to keyring.')
-
-
 # SCHEDULER = BlockingScheduler()
 # @SCHEDULER.scheduled_job('cron', hour=16, minute=59, second=58)
 def execute_reserve_meal(restaurant, reservation_time, city):
-    email, password = get_mealpal_credentials()
-    mealpal = MealPal()
+    mealpal = initialize_mealpal()
 
-    # Try to login
-    while True:
-        status_code = mealpal.login(email, password)
-        if status_code == 200:
-            print('Logged In!')
-            break
-        else:
-            print('Login Failed! Retrying...')
-
-    # Once logged in, try to reserve meal
     while True:
         try:
             status_code = mealpal.reserve_meal(
