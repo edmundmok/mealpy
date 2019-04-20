@@ -68,6 +68,9 @@ class MealPal:
             'password': password,
         }
         request = self.session.post(LOGIN_URL, data=json.dumps(data))
+
+        request.raise_for_status()
+
         return request.status_code
 
     def get_cities(self):
@@ -168,9 +171,13 @@ def initialize_mealpal():
 
     while True:
         email, password = get_mealpal_credentials()
-        if mealpal.login(email, password) == 200:
+
+        try:
+            mealpal.login(email, password)
+        except requests.HTTPError:
+            print('Invalid login credentials, please try again!')
+        else:
             break
-        print('Invalid login credentials, please try again!')
 
     # save latest cookies
     print(f'Login successful! Saving cookies as {COOKIES_FILENAME}.')
