@@ -179,6 +179,68 @@ class TestGetSchedule:
 
     @staticmethod
     @pytest.fixture
+    def success_response():
+        """A complete response example for MENU_URL endpoint."""
+        yield {
+            'city': {
+                'id': 'GUID',
+                'name': 'San Francisco',
+                'state': 'CA',
+                'time_zone_name': 'America/Los_Angeles',
+            },
+            'generated_at': '2019-04-01T00:00:00Z',
+            'schedules': [{
+                'id': 'GUID',
+                'priority': 9,
+                'is_featured': True,
+                'date': '20190401',
+                'meal': {
+                    'id': 'GUID',
+                    'name': 'Spam and Eggs',
+                    'description': 'Soemthign sometlhing python',
+                    'cuisine': 'asian',
+                    'image': 'https://example.com/image.jpg',
+                    'portion': 2,
+                    'veg': False,
+                },
+                'restaurant': {
+                    'id': 'GUID',
+                    'name': 'RestaurantName',
+                    'address': 'RestaurantAddress',
+                    'state': 'CA',
+                    'latitude': '111.111',
+                    'longitude': '-111.111',
+                    'neighborhood': {
+                        'name': 'Financial District',
+                        'id': 'GUID',
+                    },
+                    'city': {
+                        'name': 'San Francisco',
+                        'id': 'GUID',
+                        'timezone_offset_hours': -7,
+                    },
+                    'open': '2019-04-01T00:00:00Z',
+                    'close': '2019-04-01T00:00:00Z',
+                    'mpn_open': '2019-04-01T00:00:00Z',
+                    'mpn_close': '2019-04-01T00:00:00Z',
+                },
+            }],
+        }
+
+    @staticmethod
+    @pytest.fixture
+    def menu_url_response(mock_responses, success_response, mock_city):
+        mock_responses.add(
+            responses.RequestsMock.GET,
+            mealpy.MENU_URL.format(mock_city.objectId),
+            status=200,
+            json=success_response,
+        )
+
+        yield mock_responses
+
+    @staticmethod
+    @pytest.fixture
     def mock_get_city(mock_responses, mock_city):
         mock_responses.add(
             method=responses.RequestsMock.POST,
@@ -194,64 +256,64 @@ class TestGetSchedule:
         yield
 
     @staticmethod
-    @pytest.mark.usefixtures('mock_get_city')
-    def test_get_schedules(mock_responses, mock_city):
-        schedule = {
-            'id': 'GUID',
-            'priority': 9,
-            'is_featured': True,
-            'date': '20190401',
-            'meal': {
-                'id': 'GUID',
-                'name': 'Spam and Eggs',
-                'description': 'Soemthign sometlhing python',
-                'cuisine': 'asian',
-                'image': 'https://example.com/image.jpg',
-                'portion': 2,
-                'veg': False,
-            },
-            'restaurant': {
-                'id': 'GUID',
-                'name': 'RestaurantName',
-                'address': 'RestaurantAddress',
-                'state': 'CA',
-                'latitude': '111.111',
-                'longitude': '-111.111',
-                'neighborhood': {
-                    'name': 'Financial District',
-                    'id': 'GUID',
-                },
-                'city': {
-                    'name': 'San Francisco',
-                    'id': 'GUID',
-                    'timezone_offset_hours': -7,
-                },
-                'open': '2019-04-01T00:00:00Z',
-                'close': '2019-04-01T00:00:00Z',
-                'mpn_open': '2019-04-01T00:00:00Z',
-                'mpn_close': '2019-04-01T00:00:00Z',
-            },
-        }
-
-        mock_responses.add(
-            responses.RequestsMock.GET,
-            mealpy.MENU_URL.format(mock_city.objectId),
-            status=200,
-            json={
-                'city': {
-                    'id': 'GUID',
-                    'name': 'San Francisco',
-                    'state': 'CA',
-                    'time_zone_name': 'America/Los_Angeles',
-                },
-                'generated_at': '2019-04-01T00:00:00Z',
-                'schedules': [schedule],
-            },
-        )
-
+    @pytest.mark.usefixtures('mock_get_city', 'menu_url_response')
+    def test_get_schedule_by_restaurant_name(mock_city):
         mealpal = mealpy.MealPal()
 
-        assert schedule in mealpal.get_schedules(mock_city.name)
+        schedule = mealpal.get_schedule_by_restaurant_name('RestaurantName', mock_city.name)
+
+        meal = schedule['meal']
+        restaurant = schedule['restaurant']
+
+        assert meal.items() >= {
+            'id': 'GUID',
+            'name': 'Spam and Eggs',
+        }.items()
+
+        assert restaurant.items() >= {
+            'id': 'GUID',
+            'name': 'RestaurantName',
+            'address': 'RestaurantAddress',
+        }.items()
+
+    @staticmethod
+    @pytest.mark.usefixtures('mock_get_city', 'menu_url_response')
+    def test_get_schedule_by_restaurant_name_not_found(mock_city):
+        mealpal = mealpy.MealPal()
+
+        # TODO(#24):  Handle invalid restaurant
+        with pytest.raises(StopIteration):
+            mealpal.get_schedule_by_restaurant_name('NotFound', mock_city.name)
+
+    @staticmethod
+    @pytest.mark.usefixtures('mock_get_city', 'menu_url_response')
+    def test_get_schedule_by_meal_name_not_found(mock_city):
+        mealpal = mealpy.MealPal()
+
+        # TODO(#24):  Handle invalid restaurant
+        with pytest.raises(StopIteration):
+            mealpal.get_schedule_by_meal_name('NotFound', mock_city.name)
+
+    @staticmethod
+    @pytest.mark.usefixtures('mock_get_city', 'menu_url_response')
+    def test_get_schedule_by_meal_name(mock_city):
+        mealpal = mealpy.MealPal()
+
+        schedule = mealpal.get_schedule_by_meal_name('Spam and Eggs', mock_city.name)
+
+        meal = schedule['meal']
+        restaurant = schedule['restaurant']
+
+        assert meal.items() >= {
+            'id': 'GUID',
+            'name': 'Spam and Eggs',
+        }.items()
+
+        assert restaurant.items() >= {
+            'id': 'GUID',
+            'name': 'RestaurantName',
+            'address': 'RestaurantAddress',
+        }.items()
 
     @staticmethod
     @pytest.mark.usefixtures('mock_get_city')
