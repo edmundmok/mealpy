@@ -15,7 +15,7 @@ def mock_responses():
         yield _responses
 
 
-class TestGetCity:
+class TestCity:
 
     @staticmethod
     def test_get_city(mock_responses):
@@ -170,7 +170,7 @@ class TestLogin:
             mealpal.login('username', 'password')
 
 
-class TestGetSchedule:
+class TestSchedule:
 
     @staticmethod
     @pytest.fixture
@@ -328,3 +328,163 @@ class TestGetSchedule:
 
         with pytest.raises(requests.HTTPError):
             mealpal.get_schedules(mock_city.name)
+
+
+class TestCurrentMeal:
+
+    @staticmethod
+    @pytest.fixture
+    def current_meal():
+        yield {
+            'id': 'GUID',
+            'createdAt': '2019-03-20T02:53:28.908Z',
+            'date': 'March 20, 2019',
+            'pickupTime': '12:30-12:45',
+            'pickupTimeIso': ['12:30', '12:45'],
+            'googleCalendarLink': (
+                'https://www.google.com/calendar/render?action=TEMPLATE&text=Pick Up Lunch from MealPal&'
+                'details=Pick up lunch from MealPal: MEALNAME from RESTAURANTNAME\nPickup instructions: BLAHBLAH&'
+                'location=ADDRESS, CITY, STATE&dates=20190320T193000Z/20190320T194500Z&sf=true&output=xml'
+            ),
+            'mealpalNow': False,
+            'orderNumber': '1111',
+            'emojiWord': None,
+            'emojiCharacter': None,
+            'emojiUrl': None,
+            'meal': {
+                'id': 'GUID',
+                'image': 'https://example.com/image.jpg',
+                'description': 'spam, eggs, and bacon. Served on avocado toast. With no toast.',
+                'name': 'Spam Eggs',
+            },
+            'restaurant': {
+                'id': 'GUID',
+                'name': 'RESTURANTNAME',
+                'address': 'ADDRESS',
+                'city': {
+                    '__type': 'Object',
+                    'className': 'cities',
+                    'createdAt': '2016-06-22T14:33:23.000Z',
+                    'latitude': '111.111',
+                    'longitude': '-111.111',
+                    'name': 'San Francisco',
+                    'city_code': 'SFO',
+                    'objectId': 'GUID',
+                    'state': 'CA',
+                    'timezone': -7,
+                    'updatedAt': '2019-03-18T16:08:22.577Z',
+                },
+                'latitude': '111.1111',
+                'longitude': '-111.1111',
+                'lunchOpen': '11:30am',
+                'lunchClose': '2:30pm',
+                'pickupInstructions': 'BLAH BLAH',
+                'state': 'CA',
+                'timezoneOffset': -7,
+                'neighborhood': {
+                    'id': 'GUID',
+                    'name': 'SoMa',
+                },
+            },
+            'schedule': {
+                '__type': 'Object',
+                'objectId': 'GUID',
+                'className': 'schedules',
+                'date': {
+                    '__type': 'Date',
+                    'iso': '2019-03-20T00:00:00.000Z',
+                },
+            },
+        }
+
+    @staticmethod
+    @pytest.fixture
+    def success_response_no_reservation():
+        yield {
+            'result': {
+                'status': 'OPEN',
+                'kitchenMode': 'classic',
+                'time': '19:59',
+                'reserveUntil': '2019-03-20T10:30:00-07:00',
+                'cancelUntil': '2019-03-20T15:00:00-07:00',
+                'kitchenTimes': {
+                    'openTime': '5pm',
+                    'openTimeMilitary': 1700,
+                    'openHourMilitary': 17,
+                    'openMinutesMilitary': 0,
+                    'openHour': '5',
+                    'openMinutes': '00',
+                    'openPeriod': 'pm',
+                    'closeTime': '10:30am',
+                    'closeTimeMilitary': 1030,
+                    'closeHourMilitary': 10,
+                    'closeMinutesMilitary': 30,
+                    'closeHour': '10',
+                    'closeMinutes': '30',
+                    'closePeriod': 'am',
+                    'lateCancelHour': 15,
+                    'lateCancelMinutes': 0,
+                },
+                'today': {
+                    '__type': 'Date',
+                    'iso': '2019-03-20T02:59:42.000Z',
+                },
+            },
+        }
+
+    @staticmethod
+    @pytest.fixture
+    def kitchen_url_response(mock_responses, success_response_no_reservation):
+        mock_responses.add(
+            responses.RequestsMock.POST,
+            mealpy.KITCHEN_URL,
+            status=200,
+            json=success_response_no_reservation,
+        )
+
+        yield mock_responses
+
+    @staticmethod
+    @pytest.fixture
+    def kitchen_url_response_with_reservation(mock_responses, success_response_no_reservation, current_meal):
+        success_response_no_reservation['reservation'] = current_meal
+
+        mock_responses.add(
+            responses.RequestsMock.POST,
+            mealpy.KITCHEN_URL,
+            status=200,
+            json=success_response_no_reservation,
+        )
+
+        yield mock_responses
+
+    @staticmethod
+    @pytest.mark.usefixtures('kitchen_url_response')
+    def test_get_current_meal_no_meal():
+        mealpal = mealpy.MealPal()
+
+        current_meal = mealpal.get_current_meal()
+
+        assert 'reservation' not in current_meal
+
+    @staticmethod
+    @pytest.mark.usefixtures('kitchen_url_response_with_reservation')
+    def test_get_current_meal():
+        mealpal = mealpy.MealPal()
+
+        current_meal = mealpal.get_current_meal()
+
+        assert current_meal['reservation'].keys() >= {
+            'id',
+            'pickupTime',
+            'orderNumber',
+            'meal',
+            'restaurant',
+            'schedule',
+        }
+
+    @staticmethod
+    def test_cancel_current_meal():
+        mealpal = mealpy.MealPal()
+        with pytest.raises(NotImplementedError):
+            mealpal.cancel_current_meal()
