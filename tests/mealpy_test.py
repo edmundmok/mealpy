@@ -494,6 +494,83 @@ class TestCurrentMeal:
 class TestReserve:
 
     @staticmethod
+    @pytest.fixture()
+    def reserve_response(mock_responses):  # pragma: no cover
+        # Current unused
+        response = {
+            'result': {
+                'date': 'March 20, 2019',
+                'user_id': 'GUID',
+                'google_calendar_link': (
+                    'https://www.google.com/calendar/render?'
+                    'action=TEMPLATE&'
+                    'text=Pick Up Lunch from MealPal&'
+                    'details=Pick up lunch from MealPal: BLAH BLAH BLAH&'
+                    'location=LOCATION&'
+                    'dates=20190320T194500Z/20190320T200000Z&'
+                    'sf=true&'
+                    'output=xml'
+                ),
+                'encoded_google_calendar_link': 'URI_ENCODED',
+                'schedule': {
+                    'schedule_id': 'GUID',
+                    'ordered_quantity': 1,
+                    'late_canceled_quantity': 0,
+                    'pickup_window_start': '2019-03-20T12:45:00-07:00',
+                    'pickup_window_end': '2019-03-20T13:00:00-07:00',
+                    'google_calendar_link': 'LOL_WHAT_THIS_IS_DUPLICATE',
+                    'encoded_google_calendar_link': 'ENCODED_URI',
+                    'order_number': '1111',
+                    'mealpal_now': False,
+                    'emoji_word': None,
+                    'emoji_character': None,
+                    'emoji_url': None,
+                    'reserve_until': '2019-03-20T10:30:00-07:00',
+                    'cancel_until': '2019-03-20T15:00:00-07:00',
+                    'meal': {
+                        'name': 'MEAL_NAME',
+                        'image_url': 'https://example.com/image.jpg',
+                        'ingredients': 'INGREDIENT_DESCRIPTION',
+                    },
+                    'restaurant': {
+                        'lunch_open_at': '2019-03-20T11:30:00-07:00',
+                        'lunch_close_at': '2019-03-20T14:30:00-07:00',
+                        'name': 'RESTAURANT_NAME',
+                        'address': 'ADDRESS',
+                        'latitude': '111.111',
+                        'longitude': '-111.111',
+                        'pickup_strategy': 'qr_codes',
+                        'pickup_strategy_set': 'online',
+                        'pickup_instructions': 'INSTRUCTIONS',
+                        'city_name': 'San Francisco',
+                        'city_state': 'CA',
+                    },
+                },
+            },
+        }
+
+        mock_responses.add(
+            responses.RequestsMock.POST,
+            mealpy.KITCHEN_URL,
+            status=200,
+            json=response,
+        )
+        yield mock_responses
+
+    @staticmethod
+    @pytest.fixture()
+    def reserve_response_failed(mock_responses):  # pragma: no cover
+        # Current unused
+        response = {'error': 'ERROR_RESERVATION_LIMIT'}
+        mock_responses.add(
+            responses.RequestsMock.POST,
+            mealpy.KITCHEN_URL,
+            status=400,
+            json=response,
+        )
+        yield mock_responses
+
+    @staticmethod
     def test_reserve_meal_by_meal_name():
         mealpal = mealpy.MealPal()
 
