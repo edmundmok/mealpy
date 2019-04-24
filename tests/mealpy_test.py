@@ -1,4 +1,5 @@
 from collections import namedtuple
+from unittest import mock
 
 import pytest
 import requests
@@ -488,3 +489,88 @@ class TestCurrentMeal:
         mealpal = mealpy.MealPal()
         with pytest.raises(NotImplementedError):
             mealpal.cancel_current_meal()
+
+
+class TestReserve:
+
+    @staticmethod
+    def test_reserve_meal_by_meal_name():
+        mealpal = mealpy.MealPal()
+
+        schedule_id = 1
+        timing = 'mock_timing'
+        with mock.patch.object(
+                mealpy.MealPal,
+                'get_schedule_by_meal_name',
+                return_value={'id': schedule_id},
+        ) as mock_get_schedule_by_meal, \
+                mock.patch.object(mealpal, 'session') as mock_requests:
+            mealpal.reserve_meal(
+                timing,
+                'mock_city',
+                meal_name='meal_name',
+            )
+
+        assert mock_get_schedule_by_meal.called
+        assert mock_requests.post.called_with(
+            mealpy.RESERVATION_URL,
+            {
+                'quantity': 1,
+                'schedule_id': schedule_id,
+                'pickup_time': timing,
+                'source': 'Web',
+            },
+        )
+
+    @staticmethod
+    def test_reserve_meal_by_restaurant_name():
+        mealpal = mealpy.MealPal()
+
+        schedule_id = 1
+        timing = 'mock_timing'
+        with mock.patch.object(
+                mealpy.MealPal,
+                'get_schedule_by_restaurant_name',
+                return_value={'id': schedule_id},
+        ) as mock_get_schedule_by_restaurant, \
+                mock.patch.object(mealpal, 'session') as mock_requests:
+            mealpal.reserve_meal(
+                timing,
+                'mock_city',
+                restaurant_name='restaurant_name',
+            )
+
+        assert mock_get_schedule_by_restaurant.called
+        assert mock_requests.post.called_with(
+            mealpy.RESERVATION_URL,
+            {
+                'quantity': 1,
+                'schedule_id': schedule_id,
+                'pickup_time': timing,
+                'source': 'Web',
+            },
+        )
+
+    @staticmethod
+    def test_reserve_meal_missing_params():
+        """Need to set restaurant_name or meal_name."""
+        mealpal = mealpy.MealPal()
+        with pytest.raises(AssertionError):
+            mealpal.reserve_meal(mock.sentinel.timing, mock.sentinel.city)
+
+    @staticmethod
+    def test_reserve_meal_cancel_meal():
+        """Test that meal can be canceled before reserving.
+
+        This test is a little redundant atm. But it'll probably make more sense if cancellation is moved to an cli arg.
+        At least this gives test coverage.
+        """
+        mealpal = mealpy.MealPal()
+
+        with pytest.raises(NotImplementedError):
+            mealpal.reserve_meal(
+                'mock_timing',
+                'mock_city',
+                restaurant_name='restaurant_name',
+                cancel_current_meal=True,
+            )
