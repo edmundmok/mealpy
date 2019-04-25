@@ -40,7 +40,8 @@ def load_config():
         'email_address': strictyaml.Email(),
         'use_keyring': strictyaml.Bool(),
     })
-    root_dir = path.abspath(path.dirname(__file__))
+    # TODO: Revert '../' path (temp bugfix)
+    root_dir = path.abspath(path.dirname(__file__) + '../')
     template_config_path = path.join(root_dir, 'config.template.yaml')
     config_path = path.join(root_dir, CONFIG_FILENAME)
 
@@ -139,7 +140,8 @@ def get_mealpal_credentials():
 
 
 def initialize_mealpal():
-    root_dir = path.abspath(path.dirname(__file__))
+    # TODO: Revert '../' path (temp bugfix)
+    root_dir = path.abspath(path.dirname(__file__) + '../')
     cookies_path = path.join(root_dir, COOKIES_FILENAME)
     mealpal = MealPal()
     mealpal.session.cookies = MozillaCookieJar()
