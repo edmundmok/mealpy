@@ -1,0 +1,4 @@
+apscheduler
+click
+requests
+strictyaml
