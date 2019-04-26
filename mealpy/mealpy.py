@@ -2,7 +2,6 @@ import getpass
 import json
 import time
 from http.cookiejar import MozillaCookieJar
-from os import path
 from pathlib import Path
 from shutil import copyfile
 
@@ -30,11 +29,11 @@ KEYRING_SERVICENAME = BASE_DOMAIN
 
 CONFIG_FILENAME = 'config.yaml'
 COOKIES_FILENAME = 'cookies.txt'
+ROOT_DIR = Path(__file__).resolve().parent.parent
 
 
-def load_config_from_file(file_path, schema):
-    with open(file_path) as config_file:
-        return strictyaml.load(config_file.read(), schema).data
+def load_config_from_file(config_file: Path, schema: strictyaml.Map):
+    return strictyaml.load(config_file.read_text(), schema).data
 
 
 def load_config():
@@ -43,17 +42,12 @@ def load_config():
         'use_keyring': strictyaml.Bool(),
     })
 
-    root_dir = Path(__file__).parent.parent
-    template_config_path = root_dir / 'config.template.yaml'
+    template_config_path = ROOT_DIR / 'config.template.yaml'
 
-    config_dir = xdg.XDG_CONFIG_HOME / 'mealpy'
-    config_path = config_dir / CONFIG_FILENAME
+    config_path = xdg.XDG_CONFIG_HOME / 'mealpy' / CONFIG_FILENAME
 
     # Create config file if it doesn't already exist
     if not config_path.exists():
-        config_dir.mkdir(parents=True, exist_ok=True)
-        config_path.touch(exist_ok=True)
-
         copyfile(str(template_config_path), str(config_path))
         exit(
             f'{config_path} has been created.\n'
@@ -151,13 +145,11 @@ def get_mealpal_credentials():
 
 
 def initialize_mealpal():
-    # TODO: Revert '../' path (temp bugfix)
-    root_dir = path.abspath(path.dirname(__file__) + '../')
-    cookies_path = path.join(root_dir, COOKIES_FILENAME)
+    cookies_path = xdg.XDG_CACHE_HOME / 'mealpy' / COOKIES_FILENAME
     mealpal = MealPal()
     mealpal.session.cookies = MozillaCookieJar()
 
-    if path.isfile(cookies_path):
+    if cookies_path.exists():
         try:
             mealpal.session.cookies.load(cookies_path, ignore_expires=True, ignore_discard=True)
         except UnicodeDecodeError:
@@ -190,15 +182,24 @@ def initialize_mealpal():
             break
 
     # save latest cookies
-    print(f'Login successful! Saving cookies as {COOKIES_FILENAME}.')
+    print(f'Login successful! Saving cookies as {cookies_path}.')
     mealpal.session.cookies.save(cookies_path, ignore_discard=True, ignore_expires=True)
 
     return mealpal
 
 
+def initialize_directories():
+    """Mkdir all directories mealpy uses."""
+    cache = Path(xdg.XDG_CACHE_HOME) / 'mealpy'
+    config = Path(xdg.XDG_CONFIG_HOME) / 'mealpy'
+
+    for i in (cache, config):
+        i.mkdir(parents=True, exist_ok=True)
+
+
 @click.group()
 def cli():
-    pass
+    initialize_directories()
 
 
 # SCHEDULER = BlockingScheduler()
