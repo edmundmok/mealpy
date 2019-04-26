@@ -12,7 +12,7 @@ venv:
 .PHONY: test
 test: venv
 	venv/bin/coverage run -m pytest --strict tests/
-	venv/bin/coverage report --show-missing --skip-covered --fail-under 34 --omit 'tests/*'
+	venv/bin/coverage report --show-missing --skip-covered --fail-under 54 --omit 'tests/*'
 	venv/bin/coverage report --show-missing --skip-covered --fail-under 100 --include 'tests/*'
 
 .PHONY: clean
