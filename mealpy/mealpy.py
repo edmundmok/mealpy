@@ -3,11 +3,13 @@ import json
 import time
 from http.cookiejar import MozillaCookieJar
 from os import path
+from pathlib import Path
 from shutil import copyfile
 
 import click
 import requests
 import strictyaml
+import xdg
 
 BASE_DOMAIN = 'secure.mealpal.com'
 BASE_URL = f'https://{BASE_DOMAIN}'
@@ -40,17 +42,23 @@ def load_config():
         'email_address': strictyaml.Email(),
         'use_keyring': strictyaml.Bool(),
     })
-    # TODO: Revert '../' path (temp bugfix)
-    root_dir = path.abspath(path.dirname(__file__) + '../')
-    template_config_path = path.join(root_dir, 'config.template.yaml')
-    config_path = path.join(root_dir, CONFIG_FILENAME)
+
+    root_dir = Path(__file__).parent.parent
+    template_config_path = root_dir / 'config.template.yaml'
+
+    config_dir = xdg.XDG_CONFIG_HOME / 'mealpy'
+    config_path = config_dir / CONFIG_FILENAME
 
     # Create config file if it doesn't already exist
-    if not path.isfile(config_path):
-        copyfile(template_config_path, config_path)
-        print(f'{CONFIG_FILENAME} has been created in your current directory.')
-        print(f'Please update the email_address field in {CONFIG_FILENAME} with your email address for MealPal.')
-        exit(1)
+    if not config_path.exists():
+        config_dir.mkdir(parents=True, exist_ok=True)
+        config_path.touch(exist_ok=True)
+
+        copyfile(str(template_config_path), str(config_path))
+        exit(
+            f'{config_path} has been created.\n'
+            f'Please update the email_address field in {config_path} with your email address for MealPal.',
+        )
 
     config = load_config_from_file(template_config_path, schema)
     config.update(load_config_from_file(config_path, schema))
