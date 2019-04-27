@@ -1,3 +1,4 @@
+from functools import lru_cache
 from pathlib import Path
 from shutil import copyfile
 
@@ -21,7 +22,8 @@ def load_config_from_file(config_file: Path, schema: strictyaml.Map):
     return strictyaml.load(config_file.read_text(), schema).data
 
 
-def load_config():
+@lru_cache(maxsize=1)
+def get_config():
     schema = strictyaml.Map({
         'email_address': strictyaml.Email(),
         'use_keyring': strictyaml.Bool(),

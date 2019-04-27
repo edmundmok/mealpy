@@ -107,8 +107,7 @@ class MealPal:
 
 
 def get_mealpal_credentials():
-    _config = config.load_config()
-    email = _config['email_address']
+    email = config.get_config()['email_address']
     password = getpass.getpass('Enter password: ')
     return email, password
 
