@@ -3,10 +3,19 @@
 Reserve your meals on MealPal automatically, as soon as the kitchen opens.
 Never miss your favourite MealPal meals again!
 
+## Installation
+
+Install virtualenv with all required dependencies and activate it:
+
+```bash
+make venv
+source venv/bin/activate
+```
+
 ## Help
 
 ```bash
-python mealpy.py --help
+python mealpy/mealpy.py --help
 ```
 
 ## Reserve a meal
