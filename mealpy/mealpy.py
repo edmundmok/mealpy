@@ -2,13 +2,13 @@ import getpass
 import json
 import time
 from http.cookiejar import MozillaCookieJar
-from pathlib import Path
-from shutil import copyfile
 
 import click
 import requests
-import strictyaml
 import xdg
+
+from mealpy import config
+
 
 BASE_DOMAIN = 'secure.mealpal.com'
 BASE_URL = f'https://{BASE_DOMAIN}'
@@ -25,38 +25,7 @@ HEADERS = {
     'Content-Type': 'application/json',
 }
 
-KEYRING_SERVICENAME = BASE_DOMAIN
-
-CONFIG_FILENAME = 'config.yaml'
 COOKIES_FILENAME = 'cookies.txt'
-ROOT_DIR = Path(__file__).resolve().parent.parent
-
-
-def load_config_from_file(config_file: Path, schema: strictyaml.Map):
-    return strictyaml.load(config_file.read_text(), schema).data
-
-
-def load_config():
-    schema = strictyaml.Map({
-        'email_address': strictyaml.Email(),
-        'use_keyring': strictyaml.Bool(),
-    })
-
-    template_config_path = ROOT_DIR / 'config.template.yaml'
-
-    config_path = xdg.XDG_CONFIG_HOME / 'mealpy' / CONFIG_FILENAME
-
-    # Create config file if it doesn't already exist
-    if not config_path.exists():
-        copyfile(str(template_config_path), str(config_path))
-        exit(
-            f'{config_path} has been created.\n'
-            f'Please update the email_address field in {config_path} with your email address for MealPal.',
-        )
-
-    config = load_config_from_file(template_config_path, schema)
-    config.update(load_config_from_file(config_path, schema))
-    return config
 
 
 class MealPal:
@@ -138,8 +107,8 @@ class MealPal:
 
 
 def get_mealpal_credentials():
-    config = load_config()
-    email = config['email_address']
+    _config = config.load_config()
+    email = _config['email_address']
     password = getpass.getpass('Enter password: ')
     return email, password
 
@@ -188,18 +157,9 @@ def initialize_mealpal():
     return mealpal
 
 
-def initialize_directories():
-    """Mkdir all directories mealpy uses."""
-    cache = Path(xdg.XDG_CACHE_HOME) / 'mealpy'
-    config = Path(xdg.XDG_CONFIG_HOME) / 'mealpy'
-
-    for i in (cache, config):
-        i.mkdir(parents=True, exist_ok=True)
-
-
 @click.group()
 def cli():
-    initialize_directories()
+    config.initialize_directories()
 
 
 # SCHEDULER = BlockingScheduler()
@@ -233,7 +193,3 @@ def execute_reserve_meal(restaurant, reservation_time, city):
 @click.argument('city')
 def reserve(restaurant, reservation_time, city):
     execute_reserve_meal(restaurant, reservation_time, city)
-
-
-if __name__ == '__main__':
-    cli()
