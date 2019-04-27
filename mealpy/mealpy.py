@@ -2,12 +2,13 @@ import getpass
 import json
 import time
 from http.cookiejar import MozillaCookieJar
-from os import path
+from pathlib import Path
 from shutil import copyfile
 
 import click
 import requests
 import strictyaml
+import xdg
 
 BASE_DOMAIN = 'secure.mealpal.com'
 BASE_URL = f'https://{BASE_DOMAIN}'
@@ -28,11 +29,11 @@ KEYRING_SERVICENAME = BASE_DOMAIN
 
 CONFIG_FILENAME = 'config.yaml'
 COOKIES_FILENAME = 'cookies.txt'
+ROOT_DIR = Path(__file__).resolve().parent.parent
 
 
-def load_config_from_file(file_path, schema):
-    with open(file_path) as config_file:
-        return strictyaml.load(config_file.read(), schema).data
+def load_config_from_file(config_file: Path, schema: strictyaml.Map):
+    return strictyaml.load(config_file.read_text(), schema).data
 
 
 def load_config():
@@ -40,17 +41,18 @@ def load_config():
         'email_address': strictyaml.Email(),
         'use_keyring': strictyaml.Bool(),
     })
-    # TODO: Revert '../' path (temp bugfix)
-    root_dir = path.abspath(path.dirname(__file__) + '../')
-    template_config_path = path.join(root_dir, 'config.template.yaml')
-    config_path = path.join(root_dir, CONFIG_FILENAME)
+
+    template_config_path = ROOT_DIR / 'config.template.yaml'
+
+    config_path = xdg.XDG_CONFIG_HOME / 'mealpy' / CONFIG_FILENAME
 
     # Create config file if it doesn't already exist
-    if not path.isfile(config_path):
-        copyfile(template_config_path, config_path)
-        print(f'{CONFIG_FILENAME} has been created in your current directory.')
-        print(f'Please update the email_address field in {CONFIG_FILENAME} with your email address for MealPal.')
-        exit(1)
+    if not config_path.exists():
+        copyfile(str(template_config_path), str(config_path))
+        exit(
+            f'{config_path} has been created.\n'
+            f'Please update the email_address field in {config_path} with your email address for MealPal.',
+        )
 
     config = load_config_from_file(template_config_path, schema)
     config.update(load_config_from_file(config_path, schema))
@@ -143,13 +145,11 @@ def get_mealpal_credentials():
 
 
 def initialize_mealpal():
-    # TODO: Revert '../' path (temp bugfix)
-    root_dir = path.abspath(path.dirname(__file__) + '../')
-    cookies_path = path.join(root_dir, COOKIES_FILENAME)
+    cookies_path = xdg.XDG_CACHE_HOME / 'mealpy' / COOKIES_FILENAME
     mealpal = MealPal()
     mealpal.session.cookies = MozillaCookieJar()
 
-    if path.isfile(cookies_path):
+    if cookies_path.exists():
         try:
             mealpal.session.cookies.load(cookies_path, ignore_expires=True, ignore_discard=True)
         except UnicodeDecodeError:
@@ -182,15 +182,24 @@ def initialize_mealpal():
             break
 
     # save latest cookies
-    print(f'Login successful! Saving cookies as {COOKIES_FILENAME}.')
+    print(f'Login successful! Saving cookies as {cookies_path}.')
     mealpal.session.cookies.save(cookies_path, ignore_discard=True, ignore_expires=True)
 
     return mealpal
 
 
+def initialize_directories():
+    """Mkdir all directories mealpy uses."""
+    cache = Path(xdg.XDG_CACHE_HOME) / 'mealpy'
+    config = Path(xdg.XDG_CONFIG_HOME) / 'mealpy'
+
+    for i in (cache, config):
+        i.mkdir(parents=True, exist_ok=True)
+
+
 @click.group()
 def cli():
-    pass
+    initialize_directories()
 
 
 # SCHEDULER = BlockingScheduler()

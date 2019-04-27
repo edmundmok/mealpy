@@ -2,3 +2,4 @@ apscheduler
 click
 requests
 strictyaml
+xdg
