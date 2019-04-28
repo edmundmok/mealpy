@@ -126,7 +126,7 @@ class MealPal:
             'source': 'Web',
         }
 
-        request = self.session.post(RESERVATION_URL, data=reserve_data)
+        request = self.session.post(RESERVATION_URL, json=reserve_data)
         return request.status_code
 
     def get_current_meal(self):
