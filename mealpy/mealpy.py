@@ -158,7 +158,7 @@ def initialize_mealpal():
 
 @click.group()
 def cli():
-    config.initialize_directories()
+    pass
 
 
 # SCHEDULER = BlockingScheduler()

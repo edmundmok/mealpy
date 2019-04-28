@@ -29,6 +29,7 @@ ptyprocess==0.6.0
 pudb==2019.1
 py==1.8.0
 pycodestyle==2.5.0
+pyfakefs==3.5.8
 pyflakes==2.1.1
 Pygments==2.3.1
 pylint==2.3.1
