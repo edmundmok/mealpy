@@ -6,5 +6,6 @@ pudb
 pyfakefs
 pylint
 pytest
+pytest-antilru
 requirements-tools
 responses
