@@ -7,6 +7,14 @@ from mealpy import config
 
 @pytest.fixture()
 def mock_fs():
-    """ Fake filesystem. """
-    with Patcher(modules_to_reload=[config, xdg]) as patcher:
+    """Mock filesystem calls with pyfakefs."""
+
+    # Ordering matters for reloading modules. Patch upstream dependencies first, otherwise downstream dependencies will
+    # "cache" before monkey-patching occurs. i.e. config uses xdg, xdg needs to be reloaded first
+    modules_to_reload = [
+        xdg,
+        config,
+    ]
+
+    with Patcher(modules_to_reload=modules_to_reload) as patcher:
         yield patcher.fs

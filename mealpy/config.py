@@ -6,14 +6,14 @@ import strictyaml
 import xdg
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
+CACHE_DIR = xdg.XDG_CACHE_HOME / 'mealpy'
+CONFIG_DIR = xdg.XDG_CONFIG_HOME / 'mealpy'
 
 
 def initialize_directories():  # pragma: no cover
     """Mkdir all directories mealpy uses."""
-    cache = xdg.XDG_CACHE_HOME / 'mealpy'
-    config = xdg.XDG_CONFIG_HOME / 'mealpy'
 
-    for i in (cache, config):
+    for i in (CACHE_DIR, CONFIG_DIR):
         i.mkdir(parents=True, exist_ok=True)
 
 
@@ -33,7 +33,7 @@ def get_config():
     template_config_path = ROOT_DIR / 'config.template.yaml'
     assert template_config_path.exists()
 
-    config_path = xdg.XDG_CONFIG_HOME / 'mealpy' / 'config.yaml'
+    config_path = CONFIG_DIR / 'config.yaml'
 
     # Create config file if it doesn't already exist
     if not config_path.exists():  # pragma: no cover
