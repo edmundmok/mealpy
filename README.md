@@ -1,5 +1,9 @@
 # mealpy
 
+[![Build Status](https://travis-ci.org/edmundmok/mealpy.svg?branch=master)](https://travis-ci.org/edmundmok/mealpy)
+[![Coveralls github](https://img.shields.io/coveralls/github/edmundmok/mealpy.svg)](https://img.shields.io/coveralls/github/edmundmok/mealpy?branch=master)
+![license](https://img.shields.io/github/license/edmundmok/mealpy.svg)
+
 Reserve your meals on MealPal automatically, as soon as the kitchen opens.
 Never miss your favourite MealPal meals again!
 
@@ -24,14 +28,14 @@ source venv/bin/activate
 ## Quickstart
 
 ```bash
-python mealpy/mealpy.py --help
+python -m mealpy --help
 ```
 
 ### Reserve a meal
 
 ```bash
-# python mealpy.py reserve RESTAURANT RESERVATION_TIME CITY
-python mealpy.py reserve "Coast Poke Counter - Battery St." "12:15pm-12:30pm" "San Francisco"
+# python -m mealpy.py reserve RESTAURANT RESERVATION_TIME CITY
+python -m mealpy reserve "Coast Poke Counter - Battery St." "12:15pm-12:30pm" "San Francisco"
 ```
 
 ## Files
