@@ -1,0 +1,17 @@
+---
+dist: xenial
+language: python
+python:
+  - '3.7'
+  - '3.6'
+install:
+  - pip install coveralls
+  - make venv
+script:
+  - make test
+after_success:
+  - coveralls
+cache:
+  pip: true
+  directories:
+    - $HOME/.cache/pre-commit
