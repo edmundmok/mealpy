@@ -3,7 +3,9 @@ flake8
 ipython
 pre-commit
 pudb
+pyfakefs
 pylint
 pytest
+pytest-antilru
 requirements-tools
 responses
