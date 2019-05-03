@@ -10,6 +10,13 @@ venv:
 		>/dev/null
 	venv/bin/pre-commit install --install-hooks
 
+
+# Non-necessary dev environment tooling
+.PHONY: venv-dev
+venv-dev: venv
+	venv/bin/pip install ipython pudb pytest-sugar pytest-testmon pytest-watch
+
+
 .PHONY: test
 test: venv
 	venv/bin/coverage run -m pytest --strict tests/
