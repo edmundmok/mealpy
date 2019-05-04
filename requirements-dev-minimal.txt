@@ -1,8 +1,6 @@
 coverage
 flake8
-ipython
 pre-commit
-pudb
 pyfakefs
 pylint
 pytest

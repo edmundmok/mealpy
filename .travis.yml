@@ -9,6 +9,7 @@ install:
   - make venv
 script:
   - make test
+  - if test "$TRAVIS_PYTHON_VERSION" == '3.7'; then venv/bin/check-requirements; fi
 after_success:
   - coveralls
 cache:
