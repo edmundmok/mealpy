@@ -160,7 +160,7 @@ def initialize_mealpal():
 
 
 @click.group()
-def cli():
+def cli():  # pragma: no cover
     pass
 
 
@@ -193,7 +193,7 @@ def execute_reserve_meal(restaurant, reservation_time, city):
 @click.argument('restaurant')
 @click.argument('reservation_time')
 @click.argument('city')
-def reserve(restaurant, reservation_time, city):
+def reserve(restaurant, reservation_time, city):  # pragma: no cover
     execute_reserve_meal(restaurant, reservation_time, city)
 
 

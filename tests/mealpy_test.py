@@ -251,17 +251,21 @@ class TestSchedule:
 
     @staticmethod
     @pytest.mark.usefixtures('mock_get_city', 'menu_url_response')
+    @pytest.mark.xfail(
+        raises=StopIteration,
+        reason='#24 Invalid restaurant input not handled',
+    )
     def test_get_schedule_by_restaurant_name_not_found(mock_city):
-        # TODO(#24):  Handle invalid restaurant
-        with pytest.raises(StopIteration):
-            mealpy.get_schedule_by_restaurant_name('NotFound', mock_city.name)
+        mealpy.get_schedule_by_restaurant_name('NotFound', mock_city.name)
 
     @staticmethod
     @pytest.mark.usefixtures('mock_get_city', 'menu_url_response')
+    @pytest.mark.xfail(
+        raises=StopIteration,
+        reason='#24 Invalid meal name not handled',
+    )
     def test_get_schedule_by_meal_name_not_found(mock_city):
-        # TODO(#24):  Handle invalid restaurant
-        with pytest.raises(StopIteration):
-            mealpy.get_schedule_by_meal_name('NotFound', mock_city.name)
+        mealpy.get_schedule_by_meal_name('NotFound', mock_city.name)
 
     @staticmethod
     @pytest.mark.usefixtures('mock_get_city', 'menu_url_response')
@@ -449,10 +453,10 @@ class TestCurrentMeal:
         }
 
     @staticmethod
+    @pytest.mark.xfail(raises=NotImplementedError)
     def test_cancel_current_meal():
         mealpal = mealpy.MealPal()
-        with pytest.raises(NotImplementedError):
-            mealpal.cancel_current_meal()
+        mealpal.cancel_current_meal()
 
 
 class TestReserve:
@@ -600,6 +604,7 @@ class TestReserve:
             mealpal.reserve_meal(mock.sentinel.timing, mock.sentinel.city)
 
     @staticmethod
+    @pytest.mark.xfail(raises=NotImplementedError)
     def test_reserve_meal_cancel_meal():
         """Test that meal can be canceled before reserving.
 
@@ -608,10 +613,9 @@ class TestReserve:
         """
         mealpal = mealpy.MealPal()
 
-        with pytest.raises(NotImplementedError):
-            mealpal.reserve_meal(
-                'mock_timing',
-                'mock_city',
-                restaurant_name='restaurant_name',
-                cancel_current_meal=True,
-            )
+        mealpal.reserve_meal(
+            'mock_timing',
+            'mock_city',
+            restaurant_name='restaurant_name',
+            cancel_current_meal=True,
+        )
