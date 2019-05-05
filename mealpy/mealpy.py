@@ -28,6 +28,15 @@ HEADERS = {
 COOKIES_FILENAME = 'cookies.txt'
 
 
+def get_cities():
+    response = requests.post(CITIES_URL)
+    response.raise_for_status()
+
+    result = response.json()['result']
+
+    return result
+
+
 class MealPal:
 
     def __init__(self):
@@ -45,17 +54,8 @@ class MealPal:
 
         return request.status_code
 
-    def get_cities(self):
-        request = self.session.post(CITIES_URL)
-        request.raise_for_status()
-        return request.json()['result']
-
-    def get_city(self, city_name):
-        city = next((i for i in self.get_cities() if i['name'] == city_name), None)
-        return city
-
     def get_schedules(self, city_name):
-        city_id = self.get_city(city_name)['objectId']
+        city_id = next((i['objectId'] for i in get_cities() if i['name'] == city_name), None)
         request = self.session.get(MENU_URL.format(city_id))
         request.raise_for_status()
         return request.json()['schedules']
@@ -201,4 +201,5 @@ def cli_list():  # pragma: no cover
 
 @cli_list.command('cities', short_help='List available cities.')
 def cli_list_cities():  # pragma: no cover
-    print('\n'.join(MealPal().get_cities()))
+    cities = [i['name'] for i in get_cities()]
+    print('\n'.join(cities))

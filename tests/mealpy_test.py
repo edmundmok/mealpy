@@ -19,7 +19,7 @@ def mock_responses():
 class TestCity:
 
     @staticmethod
-    def test_get_city(mock_responses):
+    def test_get_cities(mock_responses):
         response = {
             'result': [
                 {
@@ -75,8 +75,8 @@ class TestCity:
             json=response,
         )
 
-        mealpal = mealpy.MealPal()
-        city = mealpal.get_city('San Francisco')
+        cities = mealpy.get_cities()
+        city = [i for i in cities if i['name'] == 'San Francisco'][0]
 
         assert city.items() >= {
             'id': 'mock_id1',
@@ -85,41 +85,15 @@ class TestCity:
         }.items()
 
     @staticmethod
-    def test_get_city_not_found(mock_responses):
-        response = {
-            'result': [
-                {
-                    'id': 'mock_id1',
-                    'objectId': 'mock_objectId1',
-                    'state': 'CA',
-                    'name': 'San Francisco',
-                    'city_code': 'SFO',
-                },
-            ],
-        }
-
-        mock_responses.add(
-            responses.RequestsMock.POST,
-            mealpy.CITIES_URL,
-            json=response,
-        )
-
-        mealpal = mealpy.MealPal()
-        city = mealpal.get_city('Not San Francisco')
-
-        assert not city
-
-    @staticmethod
-    def test_get_city_bad_response(mock_responses):
+    def test_get_cities_bad_response(mock_responses):
         mock_responses.add(
             responses.RequestsMock.POST,
             mealpy.CITIES_URL,
             status=400,
         )
 
-        mealpal = mealpy.MealPal()
         with pytest.raises(requests.exceptions.HTTPError):
-            mealpal.get_city('Not San Francisco')
+            mealpy.get_cities()
 
 
 class TestLogin:
