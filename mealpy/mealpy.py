@@ -192,3 +192,13 @@ def execute_reserve_meal(restaurant, reservation_time, city):
 @click.argument('city')
 def reserve(restaurant, reservation_time, city):
     execute_reserve_meal(restaurant, reservation_time, city)
+
+
+@cli.group(name='list')
+def cli_list():  # pragma: no cover
+    pass
+
+
+@cli_list.command('cities', short_help='List available cities.')
+def cli_list_cities():  # pragma: no cover
+    print('\n'.join(MealPal().get_cities()))
