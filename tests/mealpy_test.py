@@ -233,9 +233,7 @@ class TestSchedule:
     @staticmethod
     @pytest.mark.usefixtures('mock_get_city', 'menu_url_response')
     def test_get_schedule_by_restaurant_name(mock_city):
-        mealpal = mealpy.MealPal()
-
-        schedule = mealpal.get_schedule_by_restaurant_name('RestaurantName', mock_city.name)
+        schedule = mealpy.get_schedule_by_restaurant_name('RestaurantName', mock_city.name)
 
         meal = schedule['meal']
         restaurant = schedule['restaurant']
@@ -254,27 +252,21 @@ class TestSchedule:
     @staticmethod
     @pytest.mark.usefixtures('mock_get_city', 'menu_url_response')
     def test_get_schedule_by_restaurant_name_not_found(mock_city):
-        mealpal = mealpy.MealPal()
-
         # TODO(#24):  Handle invalid restaurant
         with pytest.raises(StopIteration):
-            mealpal.get_schedule_by_restaurant_name('NotFound', mock_city.name)
+            mealpy.get_schedule_by_restaurant_name('NotFound', mock_city.name)
 
     @staticmethod
     @pytest.mark.usefixtures('mock_get_city', 'menu_url_response')
     def test_get_schedule_by_meal_name_not_found(mock_city):
-        mealpal = mealpy.MealPal()
-
         # TODO(#24):  Handle invalid restaurant
         with pytest.raises(StopIteration):
-            mealpal.get_schedule_by_meal_name('NotFound', mock_city.name)
+            mealpy.get_schedule_by_meal_name('NotFound', mock_city.name)
 
     @staticmethod
     @pytest.mark.usefixtures('mock_get_city', 'menu_url_response')
     def test_get_schedule_by_meal_name(mock_city):
-        mealpal = mealpy.MealPal()
-
-        schedule = mealpal.get_schedule_by_meal_name('Spam and Eggs', mock_city.name)
+        schedule = mealpy.get_schedule_by_meal_name('Spam and Eggs', mock_city.name)
 
         meal = schedule['meal']
         restaurant = schedule['restaurant']
@@ -299,10 +291,8 @@ class TestSchedule:
             status=400,
         )
 
-        mealpal = mealpy.MealPal()
-
         with pytest.raises(requests.HTTPError):
-            mealpal.get_schedules(mock_city.name)
+            mealpy.get_schedules(mock_city.name)
 
 
 class TestCurrentMeal:
@@ -551,7 +541,7 @@ class TestReserve:
         schedule_id = 1
         timing = 'mock_timing'
         with mock.patch.object(
-                mealpy.MealPal,
+                mealpy,
                 'get_schedule_by_meal_name',
                 return_value={'id': schedule_id},
         ) as mock_get_schedule_by_meal, \
@@ -580,7 +570,7 @@ class TestReserve:
         schedule_id = 1
         timing = 'mock_timing'
         with mock.patch.object(
-                mealpy.MealPal,
+                mealpy,
                 'get_schedule_by_restaurant_name',
                 return_value={'id': schedule_id},
         ) as mock_get_schedule_by_restaurant, \
