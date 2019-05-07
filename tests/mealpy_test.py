@@ -75,7 +75,7 @@ class TestCity:
             json=response,
         )
 
-        cities = mealpy.get_cities()
+        cities = mealpy.MealPal.get_cities()
         city = [i for i in cities if i['name'] == 'San Francisco'][0]
 
         assert city.items() >= {
@@ -93,7 +93,7 @@ class TestCity:
         )
 
         with pytest.raises(requests.exceptions.HTTPError):
-            mealpy.get_cities()
+            mealpy.MealPal.get_cities()
 
 
 class TestLogin:
@@ -233,7 +233,7 @@ class TestSchedule:
     @staticmethod
     @pytest.mark.usefixtures('mock_get_city', 'menu_url_response')
     def test_get_schedule_by_restaurant_name(mock_city):
-        schedule = mealpy.get_schedule_by_restaurant_name('RestaurantName', mock_city.name)
+        schedule = mealpy.MealPal.get_schedule_by_restaurant_name('RestaurantName', mock_city.name)
 
         meal = schedule['meal']
         restaurant = schedule['restaurant']
@@ -256,7 +256,7 @@ class TestSchedule:
         reason='#24 Invalid restaurant input not handled',
     )
     def test_get_schedule_by_restaurant_name_not_found(mock_city):
-        mealpy.get_schedule_by_restaurant_name('NotFound', mock_city.name)
+        mealpy.MealPal.get_schedule_by_restaurant_name('NotFound', mock_city.name)
 
     @staticmethod
     @pytest.mark.usefixtures('mock_get_city', 'menu_url_response')
@@ -265,12 +265,12 @@ class TestSchedule:
         reason='#24 Invalid meal name not handled',
     )
     def test_get_schedule_by_meal_name_not_found(mock_city):
-        mealpy.get_schedule_by_meal_name('NotFound', mock_city.name)
+        mealpy.MealPal.get_schedule_by_meal_name('NotFound', mock_city.name)
 
     @staticmethod
     @pytest.mark.usefixtures('mock_get_city', 'menu_url_response')
     def test_get_schedule_by_meal_name(mock_city):
-        schedule = mealpy.get_schedule_by_meal_name('Spam and Eggs', mock_city.name)
+        schedule = mealpy.MealPal.get_schedule_by_meal_name('Spam and Eggs', mock_city.name)
 
         meal = schedule['meal']
         restaurant = schedule['restaurant']
@@ -296,7 +296,7 @@ class TestSchedule:
         )
 
         with pytest.raises(requests.HTTPError):
-            mealpy.get_schedules(mock_city.name)
+            mealpy.MealPal.get_schedules(mock_city.name)
 
 
 class TestCurrentMeal:
@@ -545,7 +545,7 @@ class TestReserve:
         schedule_id = 1
         timing = 'mock_timing'
         with mock.patch.object(
-                mealpy,
+                mealpy.MealPal,
                 'get_schedule_by_meal_name',
                 return_value={'id': schedule_id},
         ) as mock_get_schedule_by_meal, \
@@ -574,7 +574,7 @@ class TestReserve:
         schedule_id = 1
         timing = 'mock_timing'
         with mock.patch.object(
-                mealpy,
+                mealpy.MealPal,
                 'get_schedule_by_restaurant_name',
                 return_value={'id': schedule_id},
         ) as mock_get_schedule_by_restaurant, \
