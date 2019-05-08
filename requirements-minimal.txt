@@ -1,5 +1,6 @@
 apscheduler
 click
+pendulum
 requests
 strictyaml
 xdg
