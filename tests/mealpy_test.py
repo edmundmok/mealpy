@@ -1,10 +1,13 @@
+import json
 from collections import namedtuple
 from unittest import mock
 
 import pytest
 import requests
 import responses
+from freezegun import freeze_time
 
+from mealpy import config
 from mealpy import mealpy
 
 City = namedtuple('City', 'name objectId')
@@ -619,3 +622,83 @@ class TestReserve:
             restaurant_name='restaurant_name',
             cancel_current_meal=True,
         )
+
+
+class TestCli:
+
+    @staticmethod
+    @pytest.fixture(autouse=True)
+    @pytest.mark.usefixtures('mock_fs')
+    def setup_fakefs(mock_fs):
+        """Setup up fake filesystem structure."""
+        config.initialize_directories()
+
+    @staticmethod
+    @pytest.fixture(autouse=True)
+    def pinned_time():
+        """Time pinned to the test data.
+
+        This makes tests deterministic.
+        """
+        with freeze_time('2019-05-09 20:00') as frozen_time:
+            yield frozen_time
+
+    @staticmethod
+    @pytest.fixture
+    def cities_json(mock_fs):
+        contents = json.dumps({
+            'run_date': '2019-05-09T20:00:00.000000-00:00',
+            'result': [
+                {'id': 'UID', 'name': 'San Francisco'},
+            ],
+        })
+
+        mock_fs.create_file(
+            config.CACHE_DIR / 'cities.json',
+            contents=contents,
+        )
+
+    @staticmethod
+    @pytest.fixture
+    def mock_get_cities():
+        with mock.patch.object(
+                mealpy.MealPal,
+                'get_cities',
+                return_value=[
+                    {
+                        'name': 'city1',
+                    },
+                    {
+                        'name': 'city2',
+                    },
+                ],
+        ) as _mock:
+            yield _mock
+
+    @staticmethod
+    @pytest.mark.usefixtures('mock_get_cities')
+    def test_list_ciites_not_cached():
+        result = mealpy.list_cities()
+
+        assert result == ['city1', 'city2']
+        assert (config.CACHE_DIR / 'cities.json').exists()
+
+    @staticmethod
+    @pytest.mark.usefixtures('cities_json')
+    def test_list_ciites_use_cache(mock_get_cities):
+        result = mealpy.list_cities()
+
+        assert result == ['San Francisco']
+        assert not mock_get_cities.called, 'Should not be called if using cache.'
+
+    @staticmethod
+    @pytest.mark.usefixtures('cities_json')
+    def test_list_cities_cache_invalidated(pinned_time, mock_get_cities):
+        next_day = '2019-05-10T20:00:00.000000-00:00'
+        pinned_time.move_to(next_day)
+
+        # import pdb;pdb.set_trace()
+        result = mealpy.list_cities()
+
+        assert result == ['city1', 'city2']
+        assert mock_get_cities.called, "Cache should be ignored because it's stale."

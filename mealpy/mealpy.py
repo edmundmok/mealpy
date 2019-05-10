@@ -4,6 +4,7 @@ import time
 from http.cookiejar import MozillaCookieJar
 
 import click
+import pendulum
 import requests
 import xdg
 
@@ -26,6 +27,7 @@ HEADERS = {
 }
 
 COOKIES_FILENAME = 'cookies.txt'
+CACHE_HOME = xdg.XDG_CACHE_HOME / 'mealpy'
 
 
 class MealPal:
@@ -116,7 +118,7 @@ def get_mealpal_credentials():
 
 
 def initialize_mealpal():
-    cookies_path = xdg.XDG_CACHE_HOME / 'mealpy' / COOKIES_FILENAME
+    cookies_path = CACHE_HOME / COOKIES_FILENAME
     mealpal = MealPal()
     mealpal.session.cookies = MozillaCookieJar()
 
@@ -161,7 +163,7 @@ def initialize_mealpal():
 
 @click.group()
 def cli():  # pragma: no cover
-    pass
+    config.initialize_directories()
 
 
 # SCHEDULER = BlockingScheduler()
@@ -204,8 +206,27 @@ def cli_list():  # pragma: no cover
 
 @cli_list.command('cities', short_help='List available cities.')
 def cli_list_cities():  # pragma: no cover
-    cities = [i['name'] for i in MealPal.get_cities()]
-    print('\n'.join(cities))
+    print('\n'.join(list_cities()))
+
+
+def list_cities():
+    cities_file = CACHE_HOME / 'cities.json'
+
+    cities = []
+
+    if cities_file.exists():
+        cities_data = json.load(cities_file.open())
+        cache_expire_date = pendulum.parse(cities_data['run_date']).add(hours=1)
+        if pendulum.now() < cache_expire_date:
+            cities = [i['name'] for i in cities_data['result']]
+
+    if not cities:
+        cities_data = MealPal.get_cities()
+        json.dump({'run_date': str(pendulum.now()), 'result': cities_data}, cities_file.open('w'))
+
+        cities = [i['name'] for i in cities_data]
+
+    return cities
 
 
 @cli_list.command('restaurants', short_help='List available restaurants.')
