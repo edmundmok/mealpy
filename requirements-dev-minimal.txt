@@ -1,5 +1,6 @@
 coverage
 flake8
+freezegun
 pre-commit
 pyfakefs
 pylint

@@ -6,8 +6,9 @@ cfgv==1.6.0
 coverage==4.5.3
 entrypoints==0.3
 flake8==3.7.7
+freezegun==0.3.11
 identify==1.4.2
-importlib-metadata==0.10
+importlib-metadata==0.11
 isort==4.3.18
 lazy-object-proxy==1.4.0
 mccabe==0.6.1
