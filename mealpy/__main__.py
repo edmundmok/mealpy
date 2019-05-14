@@ -1,5 +1,3 @@
 from mealpy.mealpy import cli
 
-
-if __name__ == '__main__':
-    cli()
+cli(prog_name=__package__)  # pylint: disable=unexpected-keyword-arg

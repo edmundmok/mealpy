@@ -19,7 +19,7 @@ def mock_responses():
 class TestCity:
 
     @staticmethod
-    def test_get_city(mock_responses):
+    def test_get_cities(mock_responses):
         response = {
             'result': [
                 {
@@ -75,8 +75,8 @@ class TestCity:
             json=response,
         )
 
-        mealpal = mealpy.MealPal()
-        city = mealpal.get_city('San Francisco')
+        cities = mealpy.MealPal.get_cities()
+        city = [i for i in cities if i['name'] == 'San Francisco'][0]
 
         assert city.items() >= {
             'id': 'mock_id1',
@@ -85,41 +85,15 @@ class TestCity:
         }.items()
 
     @staticmethod
-    def test_get_city_not_found(mock_responses):
-        response = {
-            'result': [
-                {
-                    'id': 'mock_id1',
-                    'objectId': 'mock_objectId1',
-                    'state': 'CA',
-                    'name': 'San Francisco',
-                    'city_code': 'SFO',
-                },
-            ],
-        }
-
-        mock_responses.add(
-            responses.RequestsMock.POST,
-            mealpy.CITIES_URL,
-            json=response,
-        )
-
-        mealpal = mealpy.MealPal()
-        city = mealpal.get_city('Not San Francisco')
-
-        assert not city
-
-    @staticmethod
-    def test_get_city_bad_response(mock_responses):
+    def test_get_cities_bad_response(mock_responses):
         mock_responses.add(
             responses.RequestsMock.POST,
             mealpy.CITIES_URL,
             status=400,
         )
 
-        mealpal = mealpy.MealPal()
         with pytest.raises(requests.exceptions.HTTPError):
-            mealpal.get_city('Not San Francisco')
+            mealpy.MealPal.get_cities()
 
 
 class TestLogin:
@@ -259,9 +233,7 @@ class TestSchedule:
     @staticmethod
     @pytest.mark.usefixtures('mock_get_city', 'menu_url_response')
     def test_get_schedule_by_restaurant_name(mock_city):
-        mealpal = mealpy.MealPal()
-
-        schedule = mealpal.get_schedule_by_restaurant_name('RestaurantName', mock_city.name)
+        schedule = mealpy.MealPal.get_schedule_by_restaurant_name('RestaurantName', mock_city.name)
 
         meal = schedule['meal']
         restaurant = schedule['restaurant']
@@ -279,28 +251,26 @@ class TestSchedule:
 
     @staticmethod
     @pytest.mark.usefixtures('mock_get_city', 'menu_url_response')
+    @pytest.mark.xfail(
+        raises=StopIteration,
+        reason='#24 Invalid restaurant input not handled',
+    )
     def test_get_schedule_by_restaurant_name_not_found(mock_city):
-        mealpal = mealpy.MealPal()
-
-        # TODO(#24):  Handle invalid restaurant
-        with pytest.raises(StopIteration):
-            mealpal.get_schedule_by_restaurant_name('NotFound', mock_city.name)
+        mealpy.MealPal.get_schedule_by_restaurant_name('NotFound', mock_city.name)
 
     @staticmethod
     @pytest.mark.usefixtures('mock_get_city', 'menu_url_response')
+    @pytest.mark.xfail(
+        raises=StopIteration,
+        reason='#24 Invalid meal name not handled',
+    )
     def test_get_schedule_by_meal_name_not_found(mock_city):
-        mealpal = mealpy.MealPal()
-
-        # TODO(#24):  Handle invalid restaurant
-        with pytest.raises(StopIteration):
-            mealpal.get_schedule_by_meal_name('NotFound', mock_city.name)
+        mealpy.MealPal.get_schedule_by_meal_name('NotFound', mock_city.name)
 
     @staticmethod
     @pytest.mark.usefixtures('mock_get_city', 'menu_url_response')
     def test_get_schedule_by_meal_name(mock_city):
-        mealpal = mealpy.MealPal()
-
-        schedule = mealpal.get_schedule_by_meal_name('Spam and Eggs', mock_city.name)
+        schedule = mealpy.MealPal.get_schedule_by_meal_name('Spam and Eggs', mock_city.name)
 
         meal = schedule['meal']
         restaurant = schedule['restaurant']
@@ -325,10 +295,8 @@ class TestSchedule:
             status=400,
         )
 
-        mealpal = mealpy.MealPal()
-
         with pytest.raises(requests.HTTPError):
-            mealpal.get_schedules(mock_city.name)
+            mealpy.MealPal.get_schedules(mock_city.name)
 
 
 class TestCurrentMeal:
@@ -485,10 +453,10 @@ class TestCurrentMeal:
         }
 
     @staticmethod
+    @pytest.mark.xfail(raises=NotImplementedError)
     def test_cancel_current_meal():
         mealpal = mealpy.MealPal()
-        with pytest.raises(NotImplementedError):
-            mealpal.cancel_current_meal()
+        mealpal.cancel_current_meal()
 
 
 class TestReserve:
@@ -636,6 +604,7 @@ class TestReserve:
             mealpal.reserve_meal(mock.sentinel.timing, mock.sentinel.city)
 
     @staticmethod
+    @pytest.mark.xfail(raises=NotImplementedError)
     def test_reserve_meal_cancel_meal():
         """Test that meal can be canceled before reserving.
 
@@ -644,10 +613,9 @@ class TestReserve:
         """
         mealpal = mealpy.MealPal()
 
-        with pytest.raises(NotImplementedError):
-            mealpal.reserve_meal(
-                'mock_timing',
-                'mock_city',
-                restaurant_name='restaurant_name',
-                cancel_current_meal=True,
-            )
+        mealpal.reserve_meal(
+            'mock_timing',
+            'mock_city',
+            restaurant_name='restaurant_name',
+            cancel_current_meal=True,
+        )

@@ -45,31 +45,34 @@ class MealPal:
 
         return request.status_code
 
-    def get_cities(self):
-        request = self.session.post(CITIES_URL)
-        request.raise_for_status()
-        return request.json()['result']
+    @staticmethod
+    def get_cities():
+        response = requests.post(CITIES_URL)
+        response.raise_for_status()
 
-    def get_city(self, city_name):
-        city = next((i for i in self.get_cities() if i['name'] == city_name), None)
-        return city
+        result = response.json()['result']
 
-    def get_schedules(self, city_name):
-        city_id = self.get_city(city_name)['objectId']
-        request = self.session.get(MENU_URL.format(city_id))
+        return result
+
+    @staticmethod
+    def get_schedules(city_name):
+        city_id = next((i['objectId'] for i in MealPal.get_cities() if i['name'] == city_name), None)
+        request = requests.get(MENU_URL.format(city_id))
         request.raise_for_status()
         return request.json()['schedules']
 
-    def get_schedule_by_restaurant_name(self, restaurant_name, city_name):
+    @staticmethod
+    def get_schedule_by_restaurant_name(restaurant_name, city_name):
         restaurant = next(
             i
-            for i in self.get_schedules(city_name)
+            for i in MealPal.get_schedules(city_name)
             if i['restaurant']['name'] == restaurant_name
         )
         return restaurant
 
-    def get_schedule_by_meal_name(self, meal_name, city_name):
-        return next(i for i in self.get_schedules(city_name) if i['meal']['name'] == meal_name)
+    @staticmethod
+    def get_schedule_by_meal_name(meal_name, city_name):
+        return next(i for i in MealPal.get_schedules(city_name) if i['meal']['name'] == meal_name)
 
     def reserve_meal(
             self,
@@ -84,9 +87,9 @@ class MealPal:
             self.cancel_current_meal()
 
         if meal_name:
-            schedule_id = self.get_schedule_by_meal_name(meal_name, city_name)['id']
+            schedule_id = MealPal.get_schedule_by_meal_name(meal_name, city_name)['id']
         else:
-            schedule_id = self.get_schedule_by_restaurant_name(restaurant_name, city_name)['id']
+            schedule_id = MealPal.get_schedule_by_restaurant_name(restaurant_name, city_name)['id']
 
         reserve_data = {
             'quantity': 1,
@@ -127,7 +130,7 @@ def initialize_mealpal():
             sleep_duration = 1
             for _ in range(5):
                 try:
-                    mealpal.get_schedules('San Francisco')
+                    MealPal.get_schedules('San Francisco')
                 except requests.HTTPError:
                     # Possible fluke, retry validation
                     print(f'Login using cookies failed, retrying after {sleep_duration} second(s).')
@@ -157,7 +160,7 @@ def initialize_mealpal():
 
 
 @click.group()
-def cli():
+def cli():  # pragma: no cover
     pass
 
 
@@ -190,5 +193,30 @@ def execute_reserve_meal(restaurant, reservation_time, city):
 @click.argument('restaurant')
 @click.argument('reservation_time')
 @click.argument('city')
-def reserve(restaurant, reservation_time, city):
+def reserve(restaurant, reservation_time, city):  # pragma: no cover
     execute_reserve_meal(restaurant, reservation_time, city)
+
+
+@cli.group(name='list')
+def cli_list():  # pragma: no cover
+    pass
+
+
+@cli_list.command('cities', short_help='List available cities.')
+def cli_list_cities():  # pragma: no cover
+    cities = [i['name'] for i in MealPal.get_cities()]
+    print('\n'.join(cities))
+
+
+@cli_list.command('restaurants', short_help='List available restaurants.')
+@click.argument('city')
+def cli_list_restaurants(city):  # pragma: no cover
+    restaurants = [i['restaurant']['name'] for i in MealPal.get_schedules(city)]
+    print('\n'.join(restaurants))
+
+
+@cli_list.command('meals', short_help='List meal choices.')
+@click.argument('city')
+def cli_list_meals(city):  # pragma: no cover
+    restaurants = [i['meal']['name'] for i in MealPal.get_schedules(city)]
+    print('\n'.join(restaurants))
