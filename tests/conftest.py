@@ -5,7 +5,8 @@ import pytest
 import xdg
 from pyfakefs.fake_filesystem_unittest import Patcher
 
-import mealpy
+import mealpy.config
+import mealpy.mealpy
 
 
 @pytest.fixture()
