@@ -1,6 +1,7 @@
 import getpass
 import json
 import time
+from functools import partial
 from http.cookiejar import MozillaCookieJar
 
 import click
@@ -211,20 +212,7 @@ def cli_list_cities():  # pragma: no cover
 
 def list_cities():
     cities_file = CACHE_HOME / 'cities.json'
-
-    cities = []
-
-    if cities_file.exists():
-        cities_data = json.load(cities_file.open())
-        cache_expire_date = pendulum.parse(cities_data['run_date']).add(hours=1)
-        if pendulum.now() < cache_expire_date:
-            cities = [i['name'] for i in cities_data['result']]
-
-    if not cities:
-        cities_data = MealPal.get_cities()
-        json.dump({'run_date': str(pendulum.now()), 'result': cities_data}, cities_file.open('w'))
-
-        cities = [i['name'] for i in cities_data]
+    cities = [city['name'] for city in cache_list(cities_file, MealPal.get_cities)]
 
     return cities
 
@@ -232,12 +220,34 @@ def list_cities():
 @cli_list.command('restaurants', short_help='List available restaurants.')
 @click.argument('city')
 def cli_list_restaurants(city):  # pragma: no cover
-    restaurants = [i['restaurant']['name'] for i in MealPal.get_schedules(city)]
+    restaurants = [i['restaurant']['name'] for i in list_menu(city)]
     print('\n'.join(restaurants))
 
 
 @cli_list.command('meals', short_help='List meal choices.')
 @click.argument('city')
 def cli_list_meals(city):  # pragma: no cover
-    restaurants = [i['meal']['name'] for i in MealPal.get_schedules(city)]
+    restaurants = [i['meal']['name'] for i in list_menu(city)]
     print('\n'.join(restaurants))
+
+
+def list_menu(city):  # pragma: no cover
+    menu_file = CACHE_HOME / 'menu.json'
+    callback = partial(MealPal.get_schedules, city)
+    return cache_list(menu_file, callback)
+
+
+def cache_list(cache_file, callback):
+    items = []
+
+    if cache_file.exists():
+        data = json.load(cache_file.open())
+        cache_expire_date = pendulum.parse(data['run_date']).add(hours=1)
+        if pendulum.now() < cache_expire_date:
+            items = data['result']
+
+    if not items:
+        items = callback()
+        json.dump({'run_date': str(pendulum.now()), 'result': items}, cache_file.open('w'))
+
+    return items
