@@ -1,7 +1,6 @@
 import getpass
 import json
 import time
-from functools import partial
 from http.cookiejar import MozillaCookieJar
 
 import click
@@ -212,7 +211,20 @@ def cli_list_cities():  # pragma: no cover
 
 def list_cities():
     cities_file = CACHE_HOME / 'cities.json'
-    cities = [city['name'] for city in cache_list(cities_file, MealPal.get_cities)]
+
+    cities = []
+
+    if cities_file.exists():
+        cities_data = json.load(cities_file.open())
+        cache_expire_date = pendulum.parse(cities_data['run_date']).add(hours=1)
+        if pendulum.now() < cache_expire_date:
+            cities = [i['name'] for i in cities_data['result']]
+
+    if not cities:
+        cities_data = MealPal.get_cities()
+        json.dump({'run_date': str(pendulum.now()), 'result': cities_data}, cities_file.open('w'))
+
+        cities = [i['name'] for i in cities_data]
 
     return cities
 
@@ -231,23 +243,33 @@ def cli_list_meals(city):  # pragma: no cover
     print('\n'.join(restaurants))
 
 
-def list_menu(city):  # pragma: no cover
+def list_menu(city):
+    """Return menu for the city.
+
+    If there is cached data available, it will be used. Data is cached separately per-city and has a TTL of 1 hour.
+    """
     menu_file = CACHE_HOME / 'menu.json'
-    callback = partial(MealPal.get_schedules, city)
-    return cache_list(menu_file, callback)
 
+    cached_data = {}
+    result = []
 
-def cache_list(cache_file, callback):
-    items = []
+    if menu_file.exists():
+        cached_data = json.load(menu_file.open())
 
-    if cache_file.exists():
-        data = json.load(cache_file.open())
-        cache_expire_date = pendulum.parse(data['run_date']).add(hours=1)
-        if pendulum.now() < cache_expire_date:
-            items = data['result']
+        city_data = cached_data.get(city)
 
-    if not items:
-        items = callback()
-        json.dump({'run_date': str(pendulum.now()), 'result': items}, cache_file.open('w'))
+        if city_data:
+            cache_expire_date = pendulum.parse(city_data['run_date']).add(hours=1)
 
-    return items
+            if pendulum.now() < cache_expire_date:
+                result = city_data['result']
+
+    if not result:
+        result = MealPal.get_schedules(city)
+        cached_data[city] = {
+            'run_date': str(pendulum.now()),
+            'result': result,
+        }
+        json.dump(cached_data, menu_file.open('w'))
+
+    return result
