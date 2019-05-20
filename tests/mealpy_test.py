@@ -781,7 +781,6 @@ class TestCLIListMenu:
             assert not mock_get_schedules.called, 'Should not be called if using cache.'
 
     @staticmethod
-    @pytest.mark.skip
     @pytest.mark.usefixtures('menu_json')
     def test_cache_invalidated(pinned_time):
         next_day = '2019-05-10T20:00:00.000000-00:00'
@@ -790,8 +789,9 @@ class TestCLIListMenu:
         with mock.patch.object(
                 mealpy.MealPal,
                 'get_schedules',
+                return_value='NOT CACHED DATA',
         ) as mock_get_schedules:
             result = mealpy.list_menu('city2')
 
-            assert result == 'CITY2 DATA'
+            assert result == 'NOT CACHED DATA'
             assert mock_get_schedules.called, "Cache should be ignored because it's stale."
