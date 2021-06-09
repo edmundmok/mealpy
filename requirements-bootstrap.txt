@@ -1,4 +1,4 @@
-pip==18.1.0
+pip==19.2
 pip-custom-platform==0.3.1
 pymonkey==0.2.2
 venv-update==3.2.0
